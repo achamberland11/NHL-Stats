@@ -1,8 +1,29 @@
+function formatTOI(seconds) {
+  if (!seconds) return "0:00";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 async function loadPlayers() {
   try {
-    const response = await fetch("./Stats/players.json");
+    const season = 20252026;
+    const url = `/api/stats/rest/en/skater/summary?limit=-1&sort=points&dir=desc&cayenneExp=seasonId=${season}`;
+    const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.json();
+    const json = await response.json();
+
+    return json.data.map(p => ({
+      Joueurs: p.skaterFullName,
+      Position: [p.positionCode],
+      GP: p.gamesPlayed,
+      G: p.goals,
+      A: p.assists,
+      P: p.points,
+      "+/-": p.plusMinus,
+      TOI: formatTOI(p.timeOnIcePerGame),
+      Team: p.teamAbbrevs,
+    }));
   } catch (err) {
     console.error("Failed to load players.json:", err);
     return [];
@@ -11,9 +32,20 @@ async function loadPlayers() {
 
 async function loadGoalies() {
   try {
-    const response = await fetch("./Stats/goalies.json");
+    const season = 20252026;
+    const url = `/api/stats/rest/en/goalie/summary?limit=-1&sort=wins&dir=desc&cayenneExp=seasonId=${season}`;
+    const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.json();
+    const json = await response.json();
+
+    return json.data.map(p => ({
+      Gardiens: p.goalieFullName,
+      GP: p.gamesPlayed,
+      W: p.wins,
+      "SV%": p.savePct,
+      GAA: p.goalsAgainstAverage,
+      Team: p.teamAbbrevs,
+    }));
   } catch (err) {
     console.error("Failed to load goalies.json:", err);
     return [];
@@ -64,28 +96,28 @@ function calculerMoyennePlayerValue(data) {
 
 function calculerPlayerValue(data, player) {
   var moyennePoints = calculerMoyennePoints(data);
-  var moyenneYearLeft = calculerMoyenneYearLeft(data);
+  // var moyenneYearLeft = calculerMoyenneYearLeft(data);
 
   var pointsWeight = 2;
   var plusMinusWeight = 0.05;
   var statsWeight = 100;
   var ageWeight = 0.05;
-  var yearLeftWeight = 0.15;
+  // var yearLeftWeight = 0.15;
 
   const points = Number(player.P) || 0;
   const plusMinus = Number(player["+/-"]) || 0;
   const age = Number(player.Age) || 0;
   const GP = Number(player.GP) || 1;
-  const yearLeft = Number(player["Années Restantes"]);
+  // const yearLeft = Number(player["Années Restantes"]);
 
   var pointsValue = pointsWeight * (points / moyennePoints) + points;
   var plusMinusValue = plusMinusWeight * plusMinus;
 
   var statsValue = ((pointsValue + plusMinusValue) / GP) * statsWeight;
   var ageValue = ageWeight * (1 - (age - 25) / 25);
-  var yearLeftValue = yearLeftWeight * (1 - yearLeft / moyenneYearLeft);
+  // var yearLeftValue = yearLeftWeight * (1 - yearLeft / moyenneYearLeft);
 
-  var playerValue = statsValue + ageValue + yearLeftValue;
+  var playerValue = statsValue + ageValue/* + yearLeftValue*/;
 
   return Math.round(playerValue * 100) / 100;
 }
@@ -130,21 +162,21 @@ function calculerMoyenneGAA(data) {
 function calculerGoalerValue(data, goaler) {
   var moyenneWin = calculerMoyenneWin(data);
   var moyenneSAV = calculerMoyenneSAV(data);
-  var moyenneYearLeft = calculerMoyenneYearLeft(data);
+  // var moyenneYearLeft = calculerMoyenneYearLeft(data);
 
   var winWeight = 0.04;
   var SAVWeight = 1;
   var GAAWeight = 0.75;
   var GPWeight = 0.025;
   var ageWeight = 0.05;
-  var yearLeftWeight = 0.15;
+  // var yearLeftWeight = 0.15;
 
   const win = Number(goaler.W) || 0;
   const sav = Number(goaler["SV%"]) || 0;
   const gaa = Number(goaler.GAA) || 0;
   const age = Number(goaler.Age) || 0;
   const GP = Number(goaler.GP) || 1;
-  const yearLeft = Number(goaler["Années Restantes"]);
+  // const yearLeft = Number(goaler["Années Restantes"]);
 
   var winValue = winWeight * win + win / GP + win / moyenneWin;
   var SAVValue = SAVWeight * sav + sav / moyenneSAV;
@@ -153,9 +185,9 @@ function calculerGoalerValue(data, goaler) {
 
   var statsValue = winValue + SAVValue - GAAValue + GPValue;
   var ageValue = ageWeight * (1 - (age - 26) / 26);
-  var yearLeftValue = yearLeftWeight * (1 - yearLeft / moyenneYearLeft);
+  // var yearLeftValue = yearLeftWeight * (1 - yearLeft / moyenneYearLeft);
 
-  var goalerValue = statsValue + ageValue + yearLeftValue;
+  var goalerValue = statsValue + ageValue/* + yearLeftValue*/;
 
   return Math.round(goalerValue * 100) / 100;
 }
@@ -330,17 +362,17 @@ function buildTable(data) {
           }
         }
 
-        if (col === "Joueurs" || col === "Gardiens") {
-          a = document.createElement("a");
-          link = item.Link
-          a.textContent = "🔗";
-          a.href = link;
-          a.target = "_blank";
-          a.style.textDecoration = "none";
-          a.style.color = "inherit";
-
-          td.appendChild(a);
-        }
+        // if (col === "Joueurs" || col === "Gardiens") {
+        //   a = document.createElement("a");
+        //   link = item.Link
+        //   a.textContent = "🔗";
+        //   a.href = link;
+        //   a.target = "_blank";
+        //   a.style.textDecoration = "none";
+        //   a.style.color = "inherit";
+        //
+        //   td.appendChild(a);
+        // }
 
         tr.appendChild(td);
       });
@@ -369,11 +401,8 @@ function renderPlayers(data) {
   let playersData = await loadPlayers();
   let goalerData = await loadGoalies();
 
-  playersData = addPointsField(playersData);
-  playersData = addYearLeftField(playersData);
   playersData = addPlayerValueField(playersData);
 
-  goalerData = addYearLeftField(goalerData);
   goalerData = addGoalerValueField(goalerData);
 
   allPlayers = playersData;

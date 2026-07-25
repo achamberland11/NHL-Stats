@@ -1,0 +1,60 @@
+import urllib.request
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+
+TEAMS = [
+    "ANA",
+    "BOS",
+    "BUF",
+    "CAR",
+    "CBJ",
+    "CGY",
+    "CHI",
+    "COL",
+    "DAL",
+    "DET",
+    "EDM",
+    "FLA",
+    "LAK",
+    "MIN",
+    "MTL",
+    "NJD",
+    "NSH",
+    "NYI",
+    "NYR",
+    "OTT",
+    "PHI",
+    "PIT",
+    "SEA",
+    "STL",
+    "TBL",
+    "TOR",
+    "UTA",
+    "VAN",
+    "VGK",
+    "WPG",
+    "WSH",
+]
+
+class ProxyHandler(SimpleHTTPRequestHandler):
+    def do_GET(self):
+        if self.path.startswith("/api/"):
+            target = "https://api.nhle.com" + self.path[4:]
+            try:
+                req = urllib.request.Request(target, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req) as resp:
+                    data = resp.read()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Access-Control-Allow-Origin", "*")
+                    self.end_headers()
+                    self.wfile.write(data)
+            except Exception as e:
+                self.send_response(502)
+                self.end_headers()
+                self.wfile.write(str(e).encode())
+        else:
+            super().do_GET()
+if __name__ == "__main__":
+    server = HTTPServer(("localhost", 8000), ProxyHandler)
+    print("Running at http://localhost:8000")
+    server.serve_forever()
