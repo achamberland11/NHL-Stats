@@ -13,16 +13,17 @@ async function fetchWithCache(url, cacheKey) {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   const json = await response.json();
+  const result = "data" in json ? json.data : json;
 
   localStorage.setItem(
     cacheKey,
     JSON.stringify({
-      data: json.data,
+      data: result,
       timestamp: Date.now(),
     }),
   );
 
-  return json.data;
+  return result;
 }
 
 function formatTOI(seconds) {
@@ -76,4 +77,14 @@ async function loadGoalies(season) {
   }
 }
 
-export { CACHE_KEY, fetchWithCache, loadPlayers, loadGoalies };
+async function loadPlayerLanding(playerId) {
+  try {
+    const url = `/api-web/v1/player/${playerId}/landing`;
+    return await fetchWithCache(url, CACHE_KEY + "_landing_" + playerId);
+  } catch (err) {
+    console.error("Failed to load player landing:", err);
+    return null;
+  }
+}
+
+export { CACHE_KEY, fetchWithCache, loadPlayers, loadGoalies, loadPlayerLanding };

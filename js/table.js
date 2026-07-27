@@ -1,4 +1,5 @@
 import { calculerPlayerValueIndex, calculerGoalerValueIndex } from "./stats.js";
+import { openPlayerCard } from "./playerCard.js";
 
 /// Sort table
 function columnIsNumeric(data, colKey) {
@@ -196,12 +197,15 @@ function buildTable(data) {
         }
 
         if (col === "Joueurs" || col === "Gardiens") {
-          let a = document.createElement("a");
           const playerName = item.Joueurs || item.Gardiens;
           const slug = playerName.toLowerCase().replace(/\s+/g, "-");
-          let link = `https://www.nhl.com/player/${slug}-${item.ID}`;
+
+          td.style.cursor = "pointer";
+          td.addEventListener("click", () => openPlayerCard(item));
+
+          let a = document.createElement("a");
           a.textContent = "🔗";
-          a.href = link;
+          a.href = `https://www.nhl.com/player/${slug}-${item.ID}`;
           a.target = "_blank";
           a.style.textDecoration = "none";
           a.style.color = "inherit";

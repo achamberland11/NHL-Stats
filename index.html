@@ -77,6 +77,162 @@
       background: #4d4d4dff;
     }
 
+    .player-card-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .player-card {
+      background: #2a2a2a;
+      max-width: 600px;
+      width: 90%;
+      border-radius: 12px;
+      max-height: 85vh;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .player-card-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      color: #f0f0f0;
+      font-size: 1.5rem;
+      cursor: pointer;
+      z-index: 1;
+    }
+
+    .player-card-header {
+      display: flex;
+      gap: 1.5rem;
+      padding: 1.5rem;
+      align-items: center;
+    }
+
+    .player-card-headshot {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid #555;
+    }
+
+    .player-card-bio {
+      flex: 1;
+    }
+
+    .player-card-bio-name {
+      font-size: 1.4rem;
+      font-weight: bold;
+    }
+
+    .player-card-bio-team {
+      font-size: 0.95rem;
+      color: #ccc;
+      margin-bottom: 0.3rem;
+    }
+
+    .player-card-bio-detail {
+      font-size: 0.85rem;
+      color: #aaa;
+      line-height: 1.5;
+    }
+
+    .player-card-section {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid #444;
+    }
+
+    .player-card-section-title {
+      font-size: 0.75rem;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+
+    .player-card-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
+    }
+
+    .player-card-stat {
+      text-align: center;
+      background: #3a3a3a;
+      border-radius: 6px;
+      padding: 0.5rem;
+    }
+
+    .player-card-stat-label {
+      font-size: 0.7rem;
+      color: #aaa;
+      text-transform: uppercase;
+    }
+
+    .player-card-stat-value {
+      font-size: 1.1rem;
+      font-weight: bold;
+    }
+
+    .player-card-last5 {
+      width: 100%;
+      font-size: 0.85rem;
+      border-collapse: collapse;
+    }
+
+    .player-card-last5 th,
+    .player-card-last5 td {
+      padding: 0.3rem 0.5rem;
+      border: 1px solid #444;
+      text-align: center;
+    }
+
+    .player-card-last5 th {
+      background: #3a3a3a;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: #aaa;
+    }
+
+    .player-card-awards-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .player-card-awards-list li {
+      padding: 0.2rem 0;
+      font-size: 0.9rem;
+    }
+
+    .player-card-loading {
+      text-align: center;
+      padding: 3rem;
+      color: #aaa;
+    }
+
+    .player-card-nhl-link {
+      display: block;
+      text-align: center;
+      padding: 1rem 1.5rem;
+      border-top: 1px solid #444;
+      color: #7ae6ff;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    .player-card-nhl-link:hover {
+      text-decoration: underline;
+    }
+
     <!-- @import url("style.css"); -->
   </style>
 </head>
