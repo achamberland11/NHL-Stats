@@ -1,4 +1,4 @@
-import { calculerPlayerValue, calculerGoalerValue, calculerMoyennePlayerValue } from "./stats.js"
+import { calculerPlayerValueIndex, calculerGoalerValueIndex } from "./stats.js";
 
 /// Sort table
 function columnIsNumeric(data, colKey) {
@@ -19,6 +19,11 @@ function buildTable(data) {
 
   const columns = Object.keys(data[0] || {});
   const numericMap = {};
+
+  const thNum = document.createElement("th");
+  thNum.textContent = "#";
+  thNum.style.cursor = "default";
+  headerRow.appendChild(thNum);
 
   columns.forEach((col) => {
     const th = document.createElement("th");
@@ -98,20 +103,37 @@ function buildTable(data) {
     tbody.innerHTML = "";
     let index = 0;
 
-    // Here
     data.forEach((player) => {
       player.P != null
-        ? (player["Player Value"] = calculerPlayerValue(data, player))
-        : (player["Player Value"] = calculerGoalerValue(data, player));
+        ? (player["RVI"] = calculerPlayerValueIndex(data, player))
+        : (player["RVI"] = calculerGoalerValueIndex(data, player));
     });
 
-    const moyennePlayerValue = calculerMoyennePlayerValue(data);
+    const RVISorted = [...data].sort(
+      (a, b) => (Number(a["RVI"]) || 0) - (Number(b["RVI"]) || 0),
+    );
+    const GVISorted = [...data].sort(
+      (a, b) => (Number(a["GVI"]) || 0) - (Number(b["GVI"]) || 0),
+    );
+    const AGVISorted = [...data].sort(
+      (a, b) => (Number(a["AGVI"]) || 0) - (Number(b["AGVI"]) || 0),
+    );
+    const RVIRankMap = new Map(RVISorted.map((item, i) => [item, i]));
+    const GVIRankMap = new Map(GVISorted.map((item, i) => [item, i]));
+    const AGVIRankMap = new Map(AGVISorted.map((item, i) => [item, i]));
+    const nbrRVI = RVISorted.length;
+    const nbrGVI = GVISorted.length;
+    const nbrAGVI = AGVISorted.length;
+    const RVIPercentile = Math.floor(nbrRVI / 10);
+    const GVIPercentile = Math.floor(nbrGVI / 10);
+    const AGVIPercentile = Math.floor(nbrAGVI / 10);
 
     data.forEach((item) => {
       const tr = document.createElement("tr");
 
-      index++;
-      item.Number = index;
+      const tdNum = document.createElement("td");
+      tdNum.textContent = ++index;
+      tr.appendChild(tdNum);
 
       columns.forEach((col) => {
         const td = document.createElement("td");
@@ -119,26 +141,75 @@ function buildTable(data) {
 
         td.id = `${col}`;
 
-        if (col === "Player Value" || col === "Goaler Value") {
+        if (col === "RVI") {
           const num = Number(item[col]);
           if (!isNaN(num)) {
-            td.classList.add(
-              num > moyennePlayerValue ? "value-high" : "value-low",
-            );
+            const rank = RVIRankMap.get(item);
+            if (rank >= nbrRVI - RVIPercentile / 2) {
+              td.classList.add("value-peak");
+            } else if (rank >= nbrRVI - 2 * RVIPercentile) {
+              td.classList.add("value-high");
+            } else if (rank >= nbrRVI - 3 * RVIPercentile) {
+              td.classList.add("value-mid");
+            } else if (rank >= nbrRVI - 4 * RVIPercentile) {
+              td.classList.add("value-low");
+            } else if (rank < 5 * RVIPercentile) {
+              td.classList.add("value-bad");
+            }
           }
         }
 
-        // if (col === "Joueurs" || col === "Gardiens") {
-        //   a = document.createElement("a");
-        //   link = item.Link
-        //   a.textContent = "🔗";
-        //   a.href = link;
-        //   a.target = "_blank";
-        //   a.style.textDecoration = "none";
-        //   a.style.color = "inherit";
-        //
-        //   td.appendChild(a);
-        // }
+        if (col === "GVI") {
+          const num = Number(item[col]);
+          if (!isNaN(num)) {
+            const rank = GVIRankMap.get(item);
+            if (rank >= nbrGVI - GVIPercentile / 2) {
+              td.classList.add("value-peak");
+            } else if (rank >= nbrGVI - 2 * GVIPercentile) {
+              td.classList.add("value-high");
+            } else if (rank >= nbrGVI - 3 * GVIPercentile) {
+              td.classList.add("value-mid");
+            } else if (rank >= nbrGVI - 4 * GVIPercentile) {
+              td.classList.add("value-low");
+            } else if (rank < 5 * GVIPercentile) {
+              td.classList.add("value-bad");
+            }
+          }
+        }
+
+        if (col === "AGVI") {
+          const num = Number(item[col]);
+          if (!isNaN(num)) {
+            const rank = AGVIRankMap.get(item);
+            if (rank >= nbrAGVI - AGVIPercentile / 2) {
+              td.classList.add("value-peak");
+            } else if (rank >= nbrAGVI - 2 * AGVIPercentile) {
+              td.classList.add("value-high");
+            } else if (rank >= nbrAGVI - 3 * AGVIPercentile) {
+              td.classList.add("value-mid");
+            } else if (rank >= nbrAGVI - 4 * AGVIPercentile) {
+              td.classList.add("value-low");
+            } else if (rank < 5 * AGVIPercentile) {
+              td.classList.add("value-bad");
+            }
+          }
+        }
+
+        if (col === "Joueurs" || col === "Gardiens") {
+          let a = document.createElement("a");
+          const playerName = item.Joueurs || item.Gardiens;
+          const slug = playerName.toLowerCase().replace(/\s+/g, "-");
+          let link = `https://www.nhl.com/player/${slug}-${item.ID}`;
+          a.textContent = "🔗";
+          a.href = link;
+          a.target = "_blank";
+          a.style.textDecoration = "none";
+          a.style.color = "inherit";
+
+          td.appendChild(a);
+          td.style.display = "flex";
+          td.style.justifyContent = "space-between";
+        }
 
         tr.appendChild(td);
       });

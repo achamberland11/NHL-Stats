@@ -35,7 +35,7 @@ function formatTOI(seconds) {
 async function loadPlayers(season) {
   try {
     const url = `/api/stats/rest/en/skater/summary?limit=-1&sort=points&dir=desc&cayenneExp=seasonId=${season}%20and%20gameTypeId=2`;
-    const data = await fetchWithCache(url, CACHE_KEY + "_skaters");
+    const data = await fetchWithCache(url, CACHE_KEY + "_skaters_" + season);
 
     return data.map((p) => ({
       Joueurs: p.skaterFullName,
@@ -48,6 +48,7 @@ async function loadPlayers(season) {
       "+/-": p.plusMinus,
       PPP: p.ppPoints,
       TOI: formatTOI(p.timeOnIcePerGame),
+      ID: p.playerId,
     }));
   } catch (err) {
     console.error("Failed to load players.json:", err);
@@ -57,8 +58,8 @@ async function loadPlayers(season) {
 
 async function loadGoalies(season) {
   try {
-    const url = `/api/stats/rest/en/goalie/summary?limit=-1&sort=wins&dir=desc&cayenneExp=seasonId=${season}`;
-    const data = await fetchWithCache(url, CACHE_KEY + "_goalies");
+    const url = `/api/stats/rest/en/goalie/summary?limit=-1&sort=wins&dir=desc&cayenneExp=seasonId=${season}%20and%20gameTypeId=2`;
+    const data = await fetchWithCache(url, CACHE_KEY + "_goalies_" + season);
 
     return data.map((p) => ({
       Gardiens: p.goalieFullName,
@@ -67,6 +68,7 @@ async function loadGoalies(season) {
       W: p.wins,
       "SV%": p.savePct,
       GAA: p.goalsAgainstAverage,
+      ID: p.playerId,
     }));
   } catch (err) {
     console.error("Failed to load goalies.json:", err);

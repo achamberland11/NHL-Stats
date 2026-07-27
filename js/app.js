@@ -1,10 +1,10 @@
 import { CACHE_KEY, loadPlayers, loadGoalies } from "./api.js";
-import { addGoalerValueField, addPlayerValueField } from "./stats.js";
+import { addGoalerValueFields, addPlayerValueFields, computeAverageGVI } from "./stats.js";
 import { renderPlayers } from "./table.js";
 
-const filterSelect = document.getElementById("positionFilter");
-const defaultValue = "All";
-filterSelect.value = defaultValue;
+const positionSelect = document.getElementById("positionFilter");
+const defaultPosition = "All";
+positionSelect.value = defaultPosition;
 let allPlayers = [];
 let goalies = [];
 
@@ -12,105 +12,93 @@ const seasonSelect = document.getElementById("seasonFilter");
 const defaultSeason = "20252026";
 seasonSelect.value = defaultSeason;
 
+const Position = {
+  ALL: "All",
+  F: "F",
+  C: "C",
+  LW: "LW",
+  RW: "RW",
+  D: "D",
+  G: "G",
+};
+
+const seasons = ["20252026", "20242025", "20232024", "20222023", "20212022"];
+const seasonDataPlayer = {};
+const seasonDataGoaler = {};
+
+function filterByPosition(players, position) {
+  switch (position) {
+    case Position.ALL:
+      return players;
+    case Position.F:
+      return players.filter(
+        (p) =>
+          p.Position.includes("C") ||
+          p.Position.includes("L") ||
+          p.Position.includes("R"),
+      );
+    case Position.C:
+      return players.filter((p) => p.Position.includes("C"));
+    case Position.LW:
+      return players.filter((p) => p.Position.includes("L"));
+    case Position.RW:
+      return players.filter((p) => p.Position.includes("R"));
+    case Position.D:
+      return players.filter((p) => p.Position.includes("D"));
+    case Position.G:
+      return goalies;
+    default:
+      return players;
+  }
+}
+
 (async () => {
   document.getElementById("refreshBtn").addEventListener("click", () => {
-    localStorage.removeItem(CACHE_KEY + "_skaters");
-    localStorage.removeItem(CACHE_KEY + "_goalies");
+    localStorage.removeItem(CACHE_KEY + "_skaters_" + seasons[0]);
+    localStorage.removeItem(CACHE_KEY + "_goalies_" + seasons[0]);
     location.reload();
   });
 
   // Filtre par saison
   let season = seasonSelect.value;
-  const seasons = {
-    20252026: "2025-26",
-    20242025: "2024-25",
-    20232024: "2023-24",
-  };
+  let positionFilter = positionSelect.value;
 
-  let playersData = await loadPlayers(season);
-  let goalerData = await loadGoalies(season);
+  for (const s of seasons) {
+    const players = addPlayerValueFields(await loadPlayers(s));
+    const goalies = addGoalerValueFields(await loadGoalies(s));
 
-  playersData = addPlayerValueField(playersData);
+    seasonDataPlayer[s] = players;
+    seasonDataGoaler[s] = goalies;
+  }
 
-  goalerData = addGoalerValueField(goalerData);
+  const skatersAGVI = computeAverageGVI(seasonDataPlayer);
+  const goaliesAGVI = computeAverageGVI(seasonDataGoaler);
 
-  allPlayers = playersData;
-  goalies = goalerData;
+  for (const s of seasons){
+    for (const player of seasonDataPlayer[s]){
+      player["AGVI"] = skatersAGVI.get(player.Joueurs) || 0;
+    }
+    for (const goalie of seasonDataGoaler[s]){
+      goalie["AGVI"] = goaliesAGVI.get(goalie.Gardiens) || 0;
+    }
+  }
+
+  allPlayers = seasonDataPlayer[season];
+  goalies = seasonDataGoaler[season];
   renderPlayers(allPlayers);
 
-  ////// Filtre par position
-  let filter = filterSelect.value;
-  const Position = {
-    ALL: "All",
-    F: "F",
-    C: "C",
-    LW: "LW",
-    RW: "RW",
-    D: "D",
-    G: "G",
-  };
 
-  let filtered = allPlayers;
-  let forwards = [];
-  let centers = [];
-  let leftWing = [];
-  let rightWing = [];
-  let defences = [];
-
-  allPlayers.forEach((player) => {
-    if (
-      player.Position.includes("C") ||
-      player.Position.includes("L") ||
-      player.Position.includes("R")
-    )
-      forwards.push(player);
-    if (player.Position.includes("C")) centers.push(player);
-    if (player.Position.includes("L")) leftWing.push(player);
-    if (player.Position.includes("R")) rightWing.push(player);
-    if (player.Position.includes("D")) defences.push(player);
-  });
-
-  seasonSelect.addEventListener("change", () => {
+  seasonSelect.addEventListener("change", async () => {
     season = seasonSelect.value;
 
-    playersData = loadPlayers(season);
-    goalerData = loadGoalies(season);
+    allPlayers = seasonDataPlayer[season];
+    goalies = seasonDataGoaler[season];
 
-    playersData = addPlayerValueField(playersData);
-    goalerData = addGoalerValueField(goalerData);
-    allPlayers = playersData;
-    goalies = goalerData;
-    renderPlayers(allPlayers);
+    renderPlayers(filterByPosition(allPlayers, positionFilter));
   });
 
-  filterSelect.addEventListener("change", () => {
-    filter = filterSelect.value;
-    switch (filter) {
-      case Position.ALL:
-        filtered = allPlayers;
-        break;
-      case Position.F:
-        filtered = forwards;
-        break;
-      case Position.C:
-        filtered = centers;
-        break;
-      case Position.LW:
-        filtered = leftWing;
-        break;
-      case Position.RW:
-        filtered = rightWing;
-        break;
-      case Position.D:
-        filtered = defences;
-        break;
-      case Position.G:
-        filtered = goalies;
-        break;
-      default:
-        filtered = allPlayers;
-        break;
-    }
-    renderPlayers(filtered);
+  positionSelect.addEventListener("change", () => {
+    positionFilter = positionSelect.value;
+    renderPlayers(filterByPosition(allPlayers, positionFilter));
   });
 })();
