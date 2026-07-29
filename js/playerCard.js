@@ -9,7 +9,7 @@ function isGoalie(data) {
   return data.position === "G";
 }
 
-function buildBioSection(data) {
+function buildHeaderSection(data) {
   const header = document.createElement("div");
   header.className = "player-card-header";
 
@@ -54,6 +54,38 @@ function buildBioSection(data) {
   bio.appendChild(teamLine);
   bio.appendChild(detail);
   header.appendChild(bio);
+
+  const statsContainer = document.createElement("div");
+  statsContainer.textContent = "";
+  statsContainer.className = "player-section-container";
+  statsContainer.id = "player-stats-grid-container"
+  header.appendChild(statsContainer);
+
+  const goalie = isGoalie(data);
+
+  if (data.featuredStats?.regularSeason?.subSeason) {
+    const sub = data.featuredStats.regularSeason.subSeason;
+    const labels = goalie
+      ? [["gamesPlayed", "GP"], ["wins", "W"], ["losses", "L"], ["otLosses", "OTL"], ["goalsAgainstAvg", "GAA"], ["savePctg", "SV%"], ["shutouts", "SO"]]
+      : [["gamesPlayed", "GP"], ["goals", "G"], ["assists", "A"], ["points", "P"], ["plusMinus", "+/-"], ["powerPlayPoints", "PPP"]];
+    statsContainer.appendChild(buildStatsSection(`Current Season (${formatSeason(data.featuredStats.season)})`, sub, labels));
+  }
+
+  if (data.careerTotals?.regularSeason) {
+    const career = data.careerTotals.regularSeason;
+    const labels = goalie
+      ? [["gamesPlayed", "GP"], ["wins", "W"], ["losses", "L"], ["otLosses", "OTL"], ["goalsAgainstAvg", "GAA"], ["savePctg", "SV%"], ["shutouts", "SO"]]
+      : [["gamesPlayed", "GP"], ["goals", "G"], ["assists", "A"], ["points", "P"], ["plusMinus", "+/-"], ["avgToi", "Avg TOI"]];
+    statsContainer.appendChild(buildStatsSection("Career (NHL Regular Season)", career, labels));
+  }
+
+  // if (goalie && data.careerTotals?.playoffs) {
+  //   const playoffs = data.careerTotals.playoffs;
+  //   const labels = [["gamesPlayed", "GP"], ["wins", "W"], ["losses", "L"], ["goalsAgainstAvg", "GAA"], ["savePctg", "SV%"], ["shutouts", "SO"]];
+  //   card.appendChild(buildStatsSection("Career (Playoffs)", playoffs, labels));
+  // }
+
+
   return header;
 }
 
@@ -216,7 +248,7 @@ export async function openPlayerCard(player) {
   closeBtn.addEventListener("click", () => closeCard(overlay, keyHandler));
   card.appendChild(closeBtn);
 
-  card.appendChild(buildBioSection(data));
+  card.appendChild(buildHeaderSection(data));
 
   const playerBody = document.createElement("div");
   playerBody.textContent = "";
@@ -229,28 +261,6 @@ export async function openPlayerCard(player) {
   playerBody.appendChild(statsContainer);
 
   const goalie = isGoalie(data);
-
-  if (data.featuredStats?.regularSeason?.subSeason) {
-    const sub = data.featuredStats.regularSeason.subSeason;
-    const labels = goalie
-      ? [["gamesPlayed", "GP"], ["wins", "W"], ["losses", "L"], ["otLosses", "OTL"], ["goalsAgainstAvg", "GAA"], ["savePctg", "SV%"], ["shutouts", "SO"]]
-      : [["gamesPlayed", "GP"], ["goals", "G"], ["assists", "A"], ["points", "P"], ["plusMinus", "+/-"], ["powerPlayPoints", "PPP"]];
-    statsContainer.appendChild(buildStatsSection(`Current Season (${formatSeason(data.featuredStats.season)})`, sub, labels));
-  }
-
-  if (data.careerTotals?.regularSeason) {
-    const career = data.careerTotals.regularSeason;
-    const labels = goalie
-      ? [["gamesPlayed", "GP"], ["wins", "W"], ["losses", "L"], ["otLosses", "OTL"], ["goalsAgainstAvg", "GAA"], ["savePctg", "SV%"], ["shutouts", "SO"]]
-      : [["gamesPlayed", "GP"], ["goals", "G"], ["assists", "A"], ["points", "P"], ["plusMinus", "+/-"], ["avgToi", "Avg TOI"]];
-    statsContainer.appendChild(buildStatsSection("Career (NHL Regular Season)", career, labels));
-  }
-  //
-  // if (goalie && data.careerTotals?.playoffs) {
-  //   const playoffs = data.careerTotals.playoffs;
-  //   const labels = [["gamesPlayed", "GP"], ["wins", "W"], ["losses", "L"], ["goalsAgainstAvg", "GAA"], ["savePctg", "SV%"], ["shutouts", "SO"]];
-  //   card.appendChild(buildStatsSection("Career (Playoffs)", playoffs, labels));
-  // }
 
   const last5Section = buildLast5Section(data.last5Games, goalie);
   if (last5Section) statsContainer.appendChild(last5Section);

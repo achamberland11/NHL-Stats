@@ -95,9 +95,13 @@
   margin-bottom: 0.75rem;
 }
 
+#player-stats-grid-container {
+  flex-direction: column;
+}
+
 .player-card-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
+  /* grid-template-columns: repeat(4, 1fr); */
   gap: 0.5rem;
 }
 
