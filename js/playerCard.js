@@ -218,35 +218,45 @@ export async function openPlayerCard(player) {
 
   card.appendChild(buildBioSection(data));
 
+  const playerBody = document.createElement("div");
+  playerBody.textContent = "";
+  playerBody.className = "player-card-body";
+  card.appendChild(playerBody);
+
+  const statsContainer = document.createElement("div");
+  statsContainer.textContent = "";
+  statsContainer.className = "player-section-container";
+  playerBody.appendChild(statsContainer);
+
   const goalie = isGoalie(data);
 
   if (data.featuredStats?.regularSeason?.subSeason) {
     const sub = data.featuredStats.regularSeason.subSeason;
     const labels = goalie
       ? [["gamesPlayed", "GP"], ["wins", "W"], ["losses", "L"], ["otLosses", "OTL"], ["goalsAgainstAvg", "GAA"], ["savePctg", "SV%"], ["shutouts", "SO"]]
-      : [["gamesPlayed", "GP"], ["goals", "G"], ["assists", "A"], ["points", "P"], ["plusMinus", "+/-"], ["pim", "PIM"], ["powerPlayPoints", "PPP"], ["shootingPctg", "SH%"]];
-    card.appendChild(buildStatsSection(`Current Season (${formatSeason(data.featuredStats.season)})`, sub, labels));
+      : [["gamesPlayed", "GP"], ["goals", "G"], ["assists", "A"], ["points", "P"], ["plusMinus", "+/-"], ["powerPlayPoints", "PPP"]];
+    statsContainer.appendChild(buildStatsSection(`Current Season (${formatSeason(data.featuredStats.season)})`, sub, labels));
   }
 
   if (data.careerTotals?.regularSeason) {
     const career = data.careerTotals.regularSeason;
     const labels = goalie
       ? [["gamesPlayed", "GP"], ["wins", "W"], ["losses", "L"], ["otLosses", "OTL"], ["goalsAgainstAvg", "GAA"], ["savePctg", "SV%"], ["shutouts", "SO"]]
-      : [["gamesPlayed", "GP"], ["goals", "G"], ["assists", "A"], ["points", "P"], ["plusMinus", "+/-"], ["pim", "PIM"], ["shootingPctg", "SH%"], ["avgToi", "Avg TOI"]];
-    card.appendChild(buildStatsSection("Career (NHL Regular Season)", career, labels));
+      : [["gamesPlayed", "GP"], ["goals", "G"], ["assists", "A"], ["points", "P"], ["plusMinus", "+/-"], ["avgToi", "Avg TOI"]];
+    statsContainer.appendChild(buildStatsSection("Career (NHL Regular Season)", career, labels));
   }
+  //
+  // if (goalie && data.careerTotals?.playoffs) {
+  //   const playoffs = data.careerTotals.playoffs;
+  //   const labels = [["gamesPlayed", "GP"], ["wins", "W"], ["losses", "L"], ["goalsAgainstAvg", "GAA"], ["savePctg", "SV%"], ["shutouts", "SO"]];
+  //   card.appendChild(buildStatsSection("Career (Playoffs)", playoffs, labels));
+  // }
 
-  if (goalie && data.careerTotals?.playoffs) {
-    const playoffs = data.careerTotals.playoffs;
-    const labels = [["gamesPlayed", "GP"], ["wins", "W"], ["losses", "L"], ["goalsAgainstAvg", "GAA"], ["savePctg", "SV%"], ["shutouts", "SO"]];
-    card.appendChild(buildStatsSection("Career (Playoffs)", playoffs, labels));
-  }
+  const last5Section = buildLast5Section(data.last5Games, goalie);
+  if (last5Section) statsContainer.appendChild(last5Section);
 
   const awardsSection = buildAwardsSection(data.awards);
   if (awardsSection) card.appendChild(awardsSection);
-
-  const last5Section = buildLast5Section(data.last5Games, goalie);
-  if (last5Section) card.appendChild(last5Section);
 
   const slug = `${data.firstName.default} ${data.lastName.default}`.toLowerCase().replace(/\s+/g, "-") + "-" + data.playerId;
   const nhlLink = document.createElement("a");
