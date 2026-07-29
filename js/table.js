@@ -154,7 +154,7 @@ function buildTable(data) {
               td.classList.add("value-mid");
             } else if (rank >= nbrRVI - 4 * RVIPercentile) {
               td.classList.add("value-low");
-            } else if (rank < 5 * RVIPercentile) {
+            } else {
               td.classList.add("value-bad");
             }
           }
@@ -172,7 +172,7 @@ function buildTable(data) {
               td.classList.add("value-mid");
             } else if (rank >= nbrGVI - 4 * GVIPercentile) {
               td.classList.add("value-low");
-            } else if (rank < 5 * GVIPercentile) {
+            } else {
               td.classList.add("value-bad");
             }
           }
@@ -190,7 +190,7 @@ function buildTable(data) {
               td.classList.add("value-mid");
             } else if (rank >= nbrAGVI - 4 * AGVIPercentile) {
               td.classList.add("value-low");
-            } else if (rank < 5 * AGVIPercentile) {
+            } else {
               td.classList.add("value-bad");
             }
           }

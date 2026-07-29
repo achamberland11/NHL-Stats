@@ -5,11 +5,39 @@ body {
   color: var(--color-text);
 }
 
-.selector, .button {
-  background: var(--color-bg-secondary);
-  color: var(--color-text);
+h1 {
+  margin: 0 0 1.5rem;
+  font-size: 1.5rem;
+  font-weight: bold;
 }
 
+.filters-bar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.selector,
+.button {
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  font-family: var(--font-family);
+  cursor: pointer;
+}
+
+.selector:hover,
+.button:hover {
+  border-color: var(--color-text-secondary);
+}
+
+.button {
+  font-weight: bold;
+}
 
 #playersContainer {
   width: 100%;
