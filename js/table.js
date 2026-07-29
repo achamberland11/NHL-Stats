@@ -43,7 +43,7 @@ function buildTable(data) {
     th.appendChild(btn);
     headerRow.appendChild(th);
 
-    th.id = `${col}`;
+    th.classList.add(`col-${col}`);
 
     th.addEventListener("click", () => {
       const colKey = btn.dataset.col;
@@ -140,7 +140,7 @@ function buildTable(data) {
         const td = document.createElement("td");
         td.textContent = item[col];
 
-        td.id = `${col}`;
+        td.classList.add(`col-${col}`);
 
         if (col === "RVI") {
           const num = Number(item[col]);

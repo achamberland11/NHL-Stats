@@ -1,0 +1,16 @@
+body {
+  font-family: var(--font-family);
+  margin: 2rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.selector, .button {
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+}
+
+
+#playersContainer {
+  width: 100%;
+}

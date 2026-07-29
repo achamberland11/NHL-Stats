@@ -1,0 +1,25 @@
+:root {
+  --color-bg: #1a1a1a;
+  --color-bg-secondary: #252525ff;
+  --color-text: #f0f0f0;
+  --color-text-muted: #aaa;
+  --color-text-dim: #ccc;
+  --color-text-dark: #030303;
+  --color-accent: #7ae6ff;
+  --color-header-bg: #313131;
+  --color-card-bg: #2a2a2a;
+  --color-card-stat-bg: #3a3a3a;
+  --color-border: #ccc;
+  --color-card-border: #444;
+  --color-overlay: rgba(0, 0, 0, 0.7);
+
+  --color-value-peak: #7ae6ff;
+  --color-value-high: #9cff9c;
+  --color-value-mid: #ffff64;
+  --color-value-low: #ff9c9c;
+  --color-value-bad: #4d4d4d;
+
+  --font-family: Arial, Helvetica, sans-serif;
+  --border-radius-card: 12px;
+  --border-radius-stat: 6px;
+}

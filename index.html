@@ -4,243 +4,16 @@
 <head>
   <meta charset="UTF-8" />
   <title>NHL Players</title>
-  <style>
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      margin: 2rem;
-      background: #1a1a1aff;
-      color: #f0f0f0;
-    }
-
-    #playersContainer {
-      width : 100%;
-    }
-
-    table {
-      border-collapse: collapse;
-      min-width: 100%;
-    }
-
-    th,
-    td {
-      border: 1px solid #ccc;
-      padding: 0.5rem;
-      text-align: left;
-    }
-
-    tr th:first-child,
-    tr td:first-child {
-      max-width: fit-content;
-    }
-
-    th {
-      background: #313131ff;
-      color: #f0f0f0;
-    }
-
-    #Number {
-    }
-
-    #Joueurs {
-    }
-
-    #Link {
-      display: none;
-    }
-
-    #ID {
-      display: none;
-    }
-
-    .value-peak {
-      color: #030303ff;
-      background: #7ae6ffff;
-    }
-
-    .value-high {
-      color: #030303ff;
-      background: #9cff9cff;
-    }
-
-    .value-mid {
-      color: #030303ff;
-      background: #ffff64ff;
-    }
-
-    .value-low {
-      color: #030303ff;
-      background: #ff9c9cff;
-    }
-
-    .value-bad {
-      color: #030303ff;
-      background: #4d4d4dff;
-    }
-
-    .player-card-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.7);
-      z-index: 1000;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .player-card {
-      background: #2a2a2a;
-      max-width: 600px;
-      width: 90%;
-      border-radius: 12px;
-      max-height: 85vh;
-      overflow-y: auto;
-      position: relative;
-    }
-
-    .player-card-close {
-      position: absolute;
-      top: 1rem;
-      right: 1rem;
-      background: none;
-      border: none;
-      color: #f0f0f0;
-      font-size: 1.5rem;
-      cursor: pointer;
-      z-index: 1;
-    }
-
-    .player-card-header {
-      display: flex;
-      gap: 1.5rem;
-      padding: 1.5rem;
-      align-items: center;
-    }
-
-    .player-card-headshot {
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 3px solid #555;
-    }
-
-    .player-card-bio {
-      flex: 1;
-    }
-
-    .player-card-bio-name {
-      font-size: 1.4rem;
-      font-weight: bold;
-    }
-
-    .player-card-bio-team {
-      font-size: 0.95rem;
-      color: #ccc;
-      margin-bottom: 0.3rem;
-    }
-
-    .player-card-bio-detail {
-      font-size: 0.85rem;
-      color: #aaa;
-      line-height: 1.5;
-    }
-
-    .player-card-section {
-      padding: 1rem 1.5rem;
-      border-top: 1px solid #444;
-    }
-
-    .player-card-section-title {
-      font-size: 0.75rem;
-      color: #aaa;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 0.75rem;
-    }
-
-    .player-card-stats-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 0.5rem;
-    }
-
-    .player-card-stat {
-      text-align: center;
-      background: #3a3a3a;
-      border-radius: 6px;
-      padding: 0.5rem;
-    }
-
-    .player-card-stat-label {
-      font-size: 0.7rem;
-      color: #aaa;
-      text-transform: uppercase;
-    }
-
-    .player-card-stat-value {
-      font-size: 1.1rem;
-      font-weight: bold;
-    }
-
-    .player-card-last5 {
-      width: 100%;
-      font-size: 0.85rem;
-      border-collapse: collapse;
-    }
-
-    .player-card-last5 th,
-    .player-card-last5 td {
-      padding: 0.3rem 0.5rem;
-      border: 1px solid #444;
-      text-align: center;
-    }
-
-    .player-card-last5 th {
-      background: #3a3a3a;
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      color: #aaa;
-    }
-
-    .player-card-awards-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    .player-card-awards-list li {
-      padding: 0.2rem 0;
-      font-size: 0.9rem;
-    }
-
-    .player-card-loading {
-      text-align: center;
-      padding: 3rem;
-      color: #aaa;
-    }
-
-    .player-card-nhl-link {
-      display: block;
-      text-align: center;
-      padding: 1rem 1.5rem;
-      border-top: 1px solid #444;
-      color: #7ae6ff;
-      text-decoration: none;
-      font-size: 0.9rem;
-    }
-
-    .player-card-nhl-link:hover {
-      text-decoration: underline;
-    }
-
-    <!-- @import url("style.css"); -->
-  </style>
+  <link rel="stylesheet" href="style/variables.css">
+  <link rel="stylesheet" href="style/base.css">
+  <link rel="stylesheet" href="style/table.css">
+  <link rel="stylesheet" href="style/player-card.css">
 </head>
 
 <body>
   <h1>Player Statistics</h1>
 
-  <select id="positionFilter">
+  <select id="positionFilter" class="selector"">
     <option value="All">All positions</option>
     <option value="F">Forward</option>
     <option value="C">Center (C)</option>
@@ -250,7 +23,7 @@
     <option value="G">Goaler (G)</option>
   </select>
 
-  <select id="seasonFilter">
+  <select id="seasonFilter" class="selector">
     <option value="20252026">2025-26</option>
     <option value="20242025">2024-25</option>
     <option value="20232024">2023-24</option>
@@ -258,7 +31,7 @@
     <option value="20212022">2021-22</option>
   </select>
 
-  <button id="refreshBtn">🔄 Refresh</button>
+  <button id="refreshBtn" class="button">🔄 Refresh</button>
 
   <div id="playersContainer"></div>
 
