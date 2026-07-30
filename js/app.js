@@ -102,3 +102,6 @@ function filterByPosition(players, position) {
     renderPlayers(filterByPosition(allPlayers, positionFilter));
   });
 })();
+
+
+export { seasons, seasonDataPlayer, seasonDataGoaler };

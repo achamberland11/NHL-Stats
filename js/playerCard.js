@@ -1,8 +1,9 @@
+import { seasons, seasonDataPlayer, seasonDataGoaler } from "./app.js";
 import { loadPlayerLanding } from "./api.js";
 
 function formatSeason(yyyyyyyy) {
   const s = String(yyyyyyyy);
-  return s.slice(0, 4) + "-" + s.slice(4, 6);
+  return s.slice(0, 4) + "-" + s.slice(6, 8);
 }
 
 function isGoalie(data) {
@@ -26,9 +27,12 @@ function buildHeaderSection(data) {
   teamLine.className = "player-card-bio-team";
   const teamLogo = document.createElement("img");
   teamLogo.src = data.teamLogo;
-  teamLogo.style.cssText = "height:20px;vertical-align:middle;margin-right:0.4rem;";
+  teamLogo.style.cssText =
+    "height:20px;vertical-align:middle;margin-right:0.4rem;";
   teamLine.appendChild(teamLogo);
-  teamLine.appendChild(document.createTextNode(`#${data.sweaterNumber} · ${data.position}`));
+  teamLine.appendChild(
+    document.createTextNode(`#${data.sweaterNumber} · ${data.position}`),
+  );
 
   const nameLine = document.createElement("div");
   nameLine.className = "player-card-bio-name";
@@ -45,7 +49,9 @@ function buildHeaderSection(data) {
   ];
   if (data.draftDetails) {
     const d = data.draftDetails;
-    lines.push(`Draft: ${d.year} · Round ${d.round} Pick ${d.pickInRound} (${d.teamAbbrev}) · Overall #${d.overallPick}`);
+    lines.push(
+      `Draft: ${d.year} · Round ${d.round} Pick ${d.pickInRound} (${d.teamAbbrev}) · Overall #${d.overallPick}`,
+    );
   }
   detail.textContent = lines.join("\n");
   detail.style.whiteSpace = "pre-line";
@@ -58,25 +64,62 @@ function buildHeaderSection(data) {
   const statsContainer = document.createElement("div");
   statsContainer.textContent = "";
   statsContainer.className = "player-section-container";
-  statsContainer.id = "player-stats-grid-container"
+  statsContainer.id = "player-stats-grid-container";
   header.appendChild(statsContainer);
 
   const goalie = isGoalie(data);
-
   if (data.featuredStats?.regularSeason?.subSeason) {
     const sub = data.featuredStats.regularSeason.subSeason;
     const labels = goalie
-      ? [["gamesPlayed", "GP"], ["wins", "W"], ["losses", "L"], ["otLosses", "OTL"], ["goalsAgainstAvg", "GAA"], ["savePctg", "SV%"], ["shutouts", "SO"]]
-      : [["gamesPlayed", "GP"], ["goals", "G"], ["assists", "A"], ["points", "P"], ["plusMinus", "+/-"], ["powerPlayPoints", "PPP"]];
-    statsContainer.appendChild(buildStatsSection(`Current Season (${formatSeason(data.featuredStats.season)})`, sub, labels));
+      ? [
+        ["gamesPlayed", "GP"],
+        ["wins", "W"],
+        ["losses", "L"],
+        ["otLosses", "OTL"],
+        ["goalsAgainstAvg", "GAA"],
+        ["savePctg", "SV%"],
+        ["shutouts", "SO"],
+      ]
+      : [
+        ["gamesPlayed", "GP"],
+        ["goals", "G"],
+        ["assists", "A"],
+        ["points", "P"],
+        ["plusMinus", "+/-"],
+        ["powerPlayPoints", "PPP"],
+      ];
+    statsContainer.appendChild(
+      buildStatsSection(
+        `Current Season (${formatSeason(data.featuredStats.season)})`,
+        sub,
+        labels,
+      ),
+    );
   }
 
   if (data.careerTotals?.regularSeason) {
     const career = data.careerTotals.regularSeason;
     const labels = goalie
-      ? [["gamesPlayed", "GP"], ["wins", "W"], ["losses", "L"], ["otLosses", "OTL"], ["goalsAgainstAvg", "GAA"], ["savePctg", "SV%"], ["shutouts", "SO"]]
-      : [["gamesPlayed", "GP"], ["goals", "G"], ["assists", "A"], ["points", "P"], ["plusMinus", "+/-"], ["avgToi", "Avg TOI"]];
-    statsContainer.appendChild(buildStatsSection("Career (NHL Regular Season)", career, labels));
+      ? [
+        ["gamesPlayed", "GP"],
+        ["wins", "W"],
+        ["losses", "L"],
+        ["otLosses", "OTL"],
+        ["goalsAgainstAvg", "GAA"],
+        ["savePctg", "SV%"],
+        ["shutouts", "SO"],
+      ]
+      : [
+        ["gamesPlayed", "GP"],
+        ["goals", "G"],
+        ["assists", "A"],
+        ["points", "P"],
+        ["plusMinus", "+/-"],
+        ["avgToi", "Avg TOI"],
+      ];
+    statsContainer.appendChild(
+      buildStatsSection("Career (NHL Regular Season)", career, labels),
+    );
   }
 
   // if (goalie && data.careerTotals?.playoffs) {
@@ -84,7 +127,6 @@ function buildHeaderSection(data) {
   //   const labels = [["gamesPlayed", "GP"], ["wins", "W"], ["losses", "L"], ["goalsAgainstAvg", "GAA"], ["savePctg", "SV%"], ["shutouts", "SO"]];
   //   card.appendChild(buildStatsSection("Career (Playoffs)", playoffs, labels));
   // }
-
 
   return header;
 }
@@ -110,9 +152,10 @@ function buildStatsSection(title, stats, labels) {
     lbl.textContent = label;
     const val = document.createElement("div");
     val.className = "player-card-stat-value";
-    val.textContent = typeof stats[key] === "number" && key.includes("Pctg")
-      ? (stats[key] * 100).toFixed(1) + "%"
-      : stats[key];
+    val.textContent =
+      typeof stats[key] === "number" && key.includes("Pctg")
+        ? (stats[key] * 100).toFixed(1) + "%"
+        : stats[key];
     stat.appendChild(lbl);
     stat.appendChild(val);
     grid.appendChild(stat);
@@ -122,25 +165,72 @@ function buildStatsSection(title, stats, labels) {
   return section;
 }
 
-function buildAwardsSection(awards) {
-  if (!awards || awards.length === 0) return null;
+function buildSeasonsStatsSection(playerID, seasons, seasonData, goalie) {
+  if (!seasons || seasons.length === 0) return null;
   const section = document.createElement("div");
   section.className = "player-card-section";
 
   const title = document.createElement("div");
   title.className = "player-card-section-title";
-  title.textContent = "Awards";
+  title.textContent = "Seasons Stats";
   section.appendChild(title);
 
-  const list = document.createElement("ul");
-  list.className = "player-card-awards-list";
-  awards.forEach((award) => {
-    const li = document.createElement("li");
-    const seasons = award.seasons.map((s) => formatSeason(s.seasonId)).join(", ");
-    li.textContent = `${award.trophy.default}${seasons ? " (" + seasons + ")" : ""}`;
-    list.appendChild(li);
+  const table = document.createElement("table");
+  table.className = "player-card-stats-table";
+
+  const thead = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  const headers = goalie
+    ? ["Season", "Team", "GP", "W", "SV%", "GAA", "GVI"]
+    : ["Season", "Team", "GP", "G", "A", "P", "PPP", "+/-", "TOI", "GVI"];
+  headers.forEach((h) => {
+    const th = document.createElement("th");
+    th.textContent = h;
+    headerRow.appendChild(th);
   });
-  section.appendChild(list);
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  for (const season of seasons) {
+    const tr = document.createElement("tr");
+    let cells;
+    const player = seasonData[season]?.find((player) => player.ID === playerID);
+    if (!player) continue;
+
+    if (goalie) {
+      cells = [
+        formatSeason(season),
+        player.Team,
+        player.GP,
+        player.W,
+        player["SV%"],
+        player.GAA,
+        player.GVI,
+      ];
+    } else {
+      cells = [
+        formatSeason(season),
+        player.Team,
+        player.GP,
+        player.G,
+        player.A,
+        player.P,
+        player.PPP,
+        player["+/-"],
+        player.TOI,
+        player.GVI,
+      ];
+    }
+    cells.forEach((c) => {
+      const td = document.createElement("td");
+      td.textContent = c;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  };
+  table.appendChild(tbody);
+  section.appendChild(table);
   return section;
 }
 
@@ -155,13 +245,13 @@ function buildLast5Section(last5, goalie) {
   section.appendChild(title);
 
   const table = document.createElement("table");
-  table.className = "player-card-last5";
+  table.className = "player-card-stats-table";
 
   const thead = document.createElement("thead");
   const headerRow = document.createElement("tr");
   const headers = goalie
-    ? ["Date", "Opp", "Dec", "SV%", "GAA", "TOI"]
-    : ["Date", "Opp", "G", "A", "P", "+/-", "TOI"];
+    ? ["Date", "Opp", "W/L", "SV%", "GAA", "TOI"]
+    : ["Date", "Opp", "G", "A", "P", "PPG", "+/-", "TOI"];
   headers.forEach((h) => {
     const th = document.createElement("th");
     th.textContent = h;
@@ -191,6 +281,7 @@ function buildLast5Section(last5, goalie) {
         game.goals ?? "-",
         game.assists ?? "-",
         pts,
+        game.powerPlayGoals,
         game.plusMinus ?? "-",
         game.toi || "-",
       ];
@@ -204,6 +295,101 @@ function buildLast5Section(last5, goalie) {
   });
   table.appendChild(tbody);
   section.appendChild(table);
+  return section;
+}
+
+function buildGraphSection(playerID, seasons, seasonData, goalie) {
+  if (!seasons || seasons.length === 0) return null;
+
+  const reversed = [...seasons].reverse();
+  const labels = reversed.map((s) => s.slice(0, 4) + "-" + s.slice(6));
+
+  const stats = goalie
+    ? ["GP", "W", "GAA", "SV%", "GVI"]
+    : ["GP", "G", "A", "P", "PPP", "+/-", "GVI"];
+
+  const colorMap = {
+    GP: "#95a5a6",
+    G: "#e74c3c",
+    A: "#3498db",
+    P: "#2ecc71",
+    PPP: "#f39c12",
+    "+/-": "#9b59b6",
+    GVI: "#1abc9c",
+    W: "#2ecc71",
+    GAA: "#e74c3c",
+    "SV%": "#3498db",
+  };
+
+  const datasets = stats.map((stat) => ({
+    label: stat,
+    data: reversed.map((s) => {
+      const player = seasonData[s]?.find((p) => p.ID === playerID);
+      if (!player) return null;
+      let val = player[stat];
+      if (stat === "SV%" && val != null) val = val * 100;
+      return val;
+    }),
+    borderColor: colorMap[stat] || "#000000",
+    tension: 0,
+    fill: false,
+  }));
+
+  const section = document.createElement("div");
+  section.className = "player-card-section";
+
+  const title = document.createElement("div");
+  title.className = "player-card-section-title";
+  title.textContent = "Stat Progression";
+  section.appendChild(title);
+
+  const container = document.createElement("div");
+  container.style.cssText = "position:relative;width:100%;height:300px;";
+
+  const canvas = document.createElement("canvas");
+  canvas.style.cssText = "display:block;width:100%;height:100%;";
+  container.appendChild(canvas);
+  section.appendChild(container);
+
+  requestAnimationFrame(() => {
+    new window.Chart(canvas, {
+      type: "line",
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: "bottom", labels: { boxWidth: 12, padding: 8 } } },
+        scales: {
+          x: { ticks: { maxRotation: 0 } },
+        },
+      },
+    });
+  });
+
+  return section;
+}
+
+function buildAwardsSection(awards) {
+  if (!awards || awards.length === 0) return null;
+  const section = document.createElement("div");
+  section.className = "player-card-section";
+
+  const title = document.createElement("div");
+  title.className = "player-card-section-title";
+  title.textContent = "Awards";
+  section.appendChild(title);
+
+  const list = document.createElement("ul");
+  list.className = "player-card-awards-list";
+  awards.forEach((award) => {
+    const li = document.createElement("li");
+    const seasons = award.seasons
+      .map((s) => formatSeason(s.seasonId))
+      .join(", ");
+    li.textContent = `${award.trophy.default}${seasons ? " (" + seasons + ")" : ""}`;
+    list.appendChild(li);
+  });
+  section.appendChild(list);
   return section;
 }
 
@@ -262,13 +448,40 @@ export async function openPlayerCard(player) {
 
   const goalie = isGoalie(data);
 
+  const seasonsSection = buildSeasonsStatsSection(
+    data.playerId,
+    seasons,
+    goalie ? seasonDataGoaler : seasonDataPlayer,
+    goalie,
+  );
+  if (seasonsSection) statsContainer.appendChild(seasonsSection);
+
   const last5Section = buildLast5Section(data.last5Games, goalie);
   if (last5Section) statsContainer.appendChild(last5Section);
+
+  const graphContainer = document.createElement("div");
+  graphContainer.textContent = "";
+  graphContainer.className = "player-section-container";
+  graphContainer.style.cssText = "flex:1;min-width:0;";
+  playerBody.appendChild(graphContainer);
+
+  const graphSection = buildGraphSection(
+    data.playerId,
+    seasons,
+    goalie ? seasonDataGoaler : seasonDataPlayer,
+    goalie,
+  );
+  if (graphSection) graphContainer.appendChild(graphSection);
 
   const awardsSection = buildAwardsSection(data.awards);
   if (awardsSection) card.appendChild(awardsSection);
 
-  const slug = `${data.firstName.default} ${data.lastName.default}`.toLowerCase().replace(/\s+/g, "-") + "-" + data.playerId;
+  const slug =
+    `${data.firstName.default} ${data.lastName.default}`
+      .toLowerCase()
+      .replace(/\s+/g, "-") +
+    "-" +
+    data.playerId;
   const nhlLink = document.createElement("a");
   nhlLink.className = "player-card-nhl-link";
   nhlLink.href = `https://www.nhl.com/player/${slug}`;

@@ -10,10 +10,10 @@
 
 .player-card {
   background: var(--color-card-bg);
-  max-width: 95%;
+  max-width: 1080px;
   width: 90%;
+  max-height: 90%;
   border-radius: var(--border-radius-card);
-  max-height: 85vh;
   overflow-y: auto;
   position: relative;
 }
@@ -32,6 +32,8 @@
 
 .player-card-header {
   display: flex;
+  /* margin-left: 10%; */
+  margin-right: 5%;
   gap: 1.5rem;
   padding: 1.5rem;
   align-items: center;
@@ -69,22 +71,18 @@
 .player-card-body {
   display: flex;
   max-height: 75%;
-  width: 100%;
   padding: 1rem 1.5rem;
 }
 
 .player-section-container {
   display: flex;
+  flex-direction: column;
   gap: 20px;
-  /* width: 50%; */
-  /* max-width: 50%; */
 }
 
 .player-card-section {
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--color-border);
-  /* width: 50%; */
-  /* max-width: 50%; */
 }
 
 .player-card-section-title {
@@ -95,13 +93,8 @@
   margin-bottom: 0.75rem;
 }
 
-#player-stats-grid-container {
-  flex-direction: column;
-}
-
 .player-card-stats-grid {
   display: flex;
-  /* grid-template-columns: repeat(4, 1fr); */
   gap: 0.5rem;
 }
 
@@ -123,20 +116,20 @@
   font-weight: bold;
 }
 
-.player-card-last5 {
+.player-card-stats-table {
   width: 100%;
   font-size: 0.85rem;
   border-collapse: collapse;
 }
 
-.player-card-last5 th,
-.player-card-last5 td {
+.player-card-stats-table th,
+.player-card-stats-table td {
   padding: 0.3rem 0.5rem;
   border: 1px solid var(--color-border);
   text-align: center;
 }
 
-.player-card-last5 th {
+.player-card-stats-table th {
   background: var(--color-card-stat-bg);
   font-size: 0.7rem;
   text-transform: uppercase;
