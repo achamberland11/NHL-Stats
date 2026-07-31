@@ -26,4 +26,16 @@
   --font-family: Arial, Helvetica, sans-serif;
   --border-radius-card: 12px;
   --border-radius-sm: 6px;
+
+  --glass-bg: rgba(37, 37, 37, 0.4);
+  --glass-bg-light: rgba(60, 60, 60, 0.25);
+  --glass-bg-hover: rgba(37, 37, 37, 0.9);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --glass-border-hover: rgba(0, 0, 0, 0.18);
+  --glass-border-light: rgba(255, 255, 255, 0.1);
+  --glass-border-light-hover: rgba(255, 255, 255, 0.18);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --glass-shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --glass-blur: 20px;
+  --glass-blur-sm: 12px;
 }

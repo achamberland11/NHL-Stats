@@ -27,8 +27,7 @@ function buildHeaderSection(data) {
   teamLine.className = "player-card-bio-team";
   const teamLogo = document.createElement("img");
   teamLogo.src = data.teamLogo;
-  teamLogo.style.cssText =
-    "height:20px;vertical-align:middle;margin-right:0.4rem;";
+  teamLogo.className = "inline-icon";
   teamLine.appendChild(teamLogo);
   teamLine.appendChild(
     document.createTextNode(`#${data.sweaterNumber} · ${data.position}`),
@@ -54,7 +53,7 @@ function buildHeaderSection(data) {
     );
   }
   detail.textContent = lines.join("\n");
-  detail.style.whiteSpace = "pre-line";
+  detail.classList.add("text-pre-line");
 
   bio.appendChild(nameLine);
   bio.appendChild(teamLine);
@@ -344,10 +343,10 @@ function buildGraphSection(playerID, seasons, seasonData, goalie) {
   section.appendChild(title);
 
   const container = document.createElement("div");
-  container.style.cssText = "position:relative;width:100%;height:300px;";
+  container.className = "chart-container";
 
   const canvas = document.createElement("canvas");
-  canvas.style.cssText = "display:block;width:100%;height:100%;";
+  canvas.className = "chart-canvas";
   container.appendChild(canvas);
   section.appendChild(container);
 
@@ -461,8 +460,7 @@ export async function openPlayerCard(player) {
 
   const graphContainer = document.createElement("div");
   graphContainer.textContent = "";
-  graphContainer.className = "player-section-container";
-  graphContainer.style.cssText = "flex:1;min-width:0;";
+  graphContainer.className = "player-section-container graph-container";
   playerBody.appendChild(graphContainer);
 
   const graphSection = buildGraphSection(

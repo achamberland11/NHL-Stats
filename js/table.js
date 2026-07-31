@@ -23,23 +23,17 @@ function buildTable(data) {
 
   const thNum = document.createElement("th");
   thNum.textContent = "#";
-  thNum.style.cursor = "default";
   headerRow.appendChild(thNum);
 
   columns.forEach((col) => {
     const th = document.createElement("th");
-    th.style.cursor = "pointer";
 
     const btn = document.createElement("button");
     btn.type = "button";
+    btn.className = "sort-btn";
 
     btn.textContent = col;
     btn.dataset.col = col;
-
-    btn.style.all = "unset";
-    btn.style.display = "block";
-    btn.style.width = "100%";
-    btn.style.height = "100%";
     th.appendChild(btn);
     headerRow.appendChild(th);
 
@@ -200,19 +194,15 @@ function buildTable(data) {
           const playerName = item.Joueurs || item.Gardiens;
           const slug = playerName.toLowerCase().replace(/\s+/g, "-");
 
-          td.style.cursor = "pointer";
+          td.classList.add("cell-name");
           td.addEventListener("click", () => openPlayerCard(item));
 
           let a = document.createElement("a");
           a.textContent = "🔗";
           a.href = `https://www.nhl.com/player/${slug}-${item.ID}`;
           a.target = "_blank";
-          a.style.textDecoration = "none";
-          a.style.color = "inherit";
 
           td.appendChild(a);
-          td.style.display = "flex";
-          td.style.justifyContent = "space-between";
         }
 
         tr.appendChild(td);
