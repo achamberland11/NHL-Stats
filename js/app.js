@@ -1,4 +1,4 @@
-import { CACHE_KEY, loadPlayers, loadGoalies } from "./api.js";
+import { CACHE_KEY, loadPlayers, loadGoalies, loadRosterBirthDates } from "./api.js";
 import {
   addGoalerValueFields,
   addPlayerValueFields,
@@ -20,6 +20,9 @@ const defaultSeason = "20252026";
 seasonSelect.value = defaultSeason;
 
 const searchInput = document.getElementById("searchInput");
+
+let season = defaultSeason;
+let positionFilter = defaultPosition;
 
 const Position = {
   ALL: "All",
@@ -71,6 +74,19 @@ function filterBySearch(players, query) {
   });
 }
 
+function computeAge(birthDate, season) {
+  if (!birthDate) return 0;
+  const birth = new Date(birthDate);
+  if (isNaN(birth)) return 0;
+  const start = new Date(Number(season.slice(0, 4)), 9, 1);
+  let age = start.getFullYear() - birth.getFullYear();
+  const monthDiff = start.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && start.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+}
+
 function render() {
   const filtered = filterBySearch(
     filterByPosition(allPlayers, positionFilter),
@@ -96,14 +112,28 @@ function render() {
     render();
   });
 
-  // Filtre par saison
-  let season = seasonSelect.value;
-  let positionFilter = positionSelect.value;
+  const birthDates = await loadRosterBirthDates();
 
-  for (const s of seasons) {
-    const players = addPlayerValueFields(await loadPlayers(s));
-    const goalies = addGoalerValueFields(await loadGoalies(s));
+  const seasonResults = await Promise.all(
+    seasons.map(async (s) => {
+      const [players, goalies] = await Promise.all([
+        loadPlayers(s),
+        loadGoalies(s),
+      ]);
+      return { s, players, goalies };
+    }),
+  );
 
+  for (const { s, players, goalies } of seasonResults) {
+    for (const player of players) {
+      player.Age = computeAge(birthDates.get(player.ID), s);
+    }
+    for (const goalie of goalies) {
+      goalie.Age = computeAge(birthDates.get(goalie.ID), s);
+    }
+
+    addPlayerValueFields(players);
+    addGoalerValueFields(goalies);
     addCategoryRanks(players, SKATER_RANK_CONFIG);
     addCategoryRanks(goalies, GOALIE_RANK_CONFIG);
 

@@ -1,11 +1,47 @@
 const CACHE_KEY = "nhl_stats_cache";
 const CACHE_TTL = 60 * 60 * 1000 * 24;
+const ROSTER_TTL = CACHE_TTL * 7;
 
-async function fetchWithCache(url, cacheKey) {
+const TEAMS = [
+  "ANA",
+  "BOS",
+  "BUF",
+  "CAR",
+  "CBJ",
+  "CGY",
+  "CHI",
+  "COL",
+  "DAL",
+  "DET",
+  "EDM",
+  "FLA",
+  "LAK",
+  "MIN",
+  "MTL",
+  "NJD",
+  "NSH",
+  "NYI",
+  "NYR",
+  "OTT",
+  "PHI",
+  "PIT",
+  "SEA",
+  "SJS",
+  "STL",
+  "TBL",
+  "TOR",
+  "UTA",
+  "VAN",
+  "VGK",
+  "WPG",
+  "WSH",
+];
+
+async function fetchWithCache(url, cacheKey, ttl = CACHE_TTL) {
   const cached = localStorage.getItem(cacheKey);
   if (cached) {
     const { data, timestamp } = JSON.parse(cached);
-    if (Date.now() - timestamp < CACHE_TTL) {
+    if (Date.now() - timestamp < ttl) {
       return data;
     }
   }
@@ -87,4 +123,41 @@ async function loadPlayerLanding(playerId) {
   }
 }
 
-export { CACHE_KEY, fetchWithCache, loadPlayers, loadGoalies, loadPlayerLanding };
+async function loadRosterBirthDates() {
+  const results = await Promise.all(
+    TEAMS.map(async (team) => {
+      try {
+        const url = `/api-web/v1/roster/${team}/current`;
+        const data = await fetchWithCache(
+          url,
+          CACHE_KEY + "_roster_" + team,
+          ROSTER_TTL,
+        );
+        const groups = [data.forwards, data.defensemen, data.goalies].filter(
+          Boolean,
+        );
+        return groups.flat().map((p) => [p.id, p.birthDate]);
+      } catch (err) {
+        console.error("Failed to load roster:", team, err);
+        return [];
+      }
+    }),
+  );
+
+  const birthDates = new Map();
+  for (const pairs of results) {
+    for (const [id, date] of pairs) {
+      if (date) birthDates.set(id, date);
+    }
+  }
+  return birthDates;
+}
+
+export {
+  CACHE_KEY,
+  fetchWithCache,
+  loadPlayers,
+  loadGoalies,
+  loadPlayerLanding,
+  loadRosterBirthDates,
+};

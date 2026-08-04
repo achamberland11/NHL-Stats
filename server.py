@@ -25,6 +25,7 @@ TEAMS = [
     "PHI",
     "PIT",
     "SEA",
+    "SJS",
     "STL",
     "TBL",
     "TOR",

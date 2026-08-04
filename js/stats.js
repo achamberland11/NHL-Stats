@@ -1,3 +1,5 @@
+import { VALUE_WEIGHTS } from "./config.js";
+
 ////// Calculer moyennes
 function calculerMoyenneGoals(data) {
   if (!Array.isArray(data) || data.length === 0) return data;
@@ -91,13 +93,16 @@ function calculerPlayerValueIndex(data, player) {
   var moyennePoints = calculerMoyennePoints(data);
   var moyennePPPoints = calculerMoyennePPPoints(data);
 
-  var goalsWeight = 1;
-  var assistWeight = 0.5;
-  var pointsWeight = 2;
-  var plusMinusWeight = 0.05;
-  var ppPointsWeight = 1.5;
-  var statsWeight = 100;
-  var ageWeight = 0.05;
+  var {
+    goalsWeight,
+    assistWeight,
+    pointsWeight,
+    plusMinusWeight,
+    ppPointsWeight,
+    statsWeight,
+    ageWeight,
+    skaterAgePeak,
+  } = VALUE_WEIGHTS;
 
   const goals = Number(player.G) || 0;
   const assists = Number(player.A) || 0;
@@ -116,7 +121,7 @@ function calculerPlayerValueIndex(data, player) {
   var stats =
     goalsValue + assistsValue + pointsValue + plusMinusValue + ppPointsValue;
   var statsValue = (stats + stats / GP) * statsWeight;
-  var ageValue = ageWeight * (1 - (age - 25) / 25);
+  var ageValue = ageWeight * (1 - (age - skaterAgePeak) / skaterAgePeak);
 
   var playerValue = statsValue + ageValue;
   playerValue /= 100;
@@ -129,11 +134,14 @@ function calculerGoalerValueIndex(data, goaler) {
   var moyenneSAV = calculerMoyenneSAV(data);
   var moyenneGAA = calculerMoyenneGAA(data);
 
-  var winWeight = 0.04;
-  var SAVWeight = 1;
-  var GAAWeight = 0.75;
-  var GPWeight = 0.025;
-  var ageWeight = 0.05;
+  var {
+    winWeight,
+    saveWeight,
+    gaaWeight,
+    gpWeight,
+    goalieAgeWeight,
+    goalieAgePeak,
+  } = VALUE_WEIGHTS;
 
   const win = Number(goaler.W) || 0;
   const sav = Number(goaler["SV%"]) || 0;
@@ -142,12 +150,12 @@ function calculerGoalerValueIndex(data, goaler) {
   const GP = Number(goaler.GP) || 1;
 
   var winValue = winWeight * win + win / GP + win / moyenneWin;
-  var SAVValue = SAVWeight * sav + sav / moyenneSAV;
-  var GAAValue = GAAWeight * gaa + gaa / moyenneGAA;
-  var GPValue = GPWeight * GP;
+  var SAVValue = saveWeight * sav + sav / moyenneSAV;
+  var GAAValue = gaaWeight * gaa + gaa / moyenneGAA;
+  var GPValue = gpWeight * GP;
 
   var statsValue = winValue + SAVValue - GAAValue + GPValue;
-  var ageValue = ageWeight * (1 - (age - 26) / 26);
+  var ageValue = goalieAgeWeight * (1 - (age - goalieAgePeak) / goalieAgePeak);
 
   var goalerValue = statsValue + ageValue;
 

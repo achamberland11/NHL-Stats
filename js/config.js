@@ -1,0 +1,48 @@
+export const LEAGUE_CONFIG = {
+  numTeams: 10,
+  skaterCategories: ["G", "A", "P", "PPP", "+/-"],
+  goalieCategories: ["W", "SV%", "GAA"],
+  categoryWeights: {
+    G: 1,
+    A: 1,
+    P: 1,
+    PPP: 1,
+    "+/-": 1,
+    W: 1,
+    "SV%": 1,
+    GAA: 1,
+  },
+  minGP: 20,
+  goalieMinGP: 10,
+  gameLimits: {
+    C: 164,
+    LW: 164,
+    RW: 164,
+    D: 328,
+    G: 82,
+  },
+  lineup: {
+    C: 2,
+    LW: 2,
+    RW: 2,
+    D: 4,
+    G: 1,
+  },
+};
+
+export const VALUE_WEIGHTS = {
+  goalsWeight: 1,
+  assistWeight: 0.5,
+  pointsWeight: 2,
+  plusMinusWeight: 0.05,
+  ppPointsWeight: 1.5,
+  statsWeight: 10,
+  ageWeight: 0.05,
+  skaterAgePeak: 24,
+  winWeight: 0.04,
+  saveWeight: 1,
+  gaaWeight: 0.75,
+  gpWeight: 0.025,
+  goalieAgeWeight: 0.05,
+  goalieAgePeak: 25,
+};
