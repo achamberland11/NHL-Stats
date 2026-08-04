@@ -65,6 +65,23 @@ option {
   font-weight: bold;
 }
 
+#searchInput {
+  flex: 1;
+  min-width: 160px;
+  cursor: text;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
 #playersContainer {
   width: 100%;
 }

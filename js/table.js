@@ -1,6 +1,49 @@
 import { calculerPlayerValueIndex, calculerGoalerValueIndex } from "./stats.js";
 import { openPlayerCard } from "./playerCard.js";
 
+const RANK_COLS = new Set([
+  "rankG",
+  "rankA",
+  "rankP",
+  "rankPPP",
+  "rankPM",
+  "rankW",
+  "rankSV",
+  "rankGAA",
+]);
+
+const HEADER_LABELS = {
+  rankG: "G Rank",
+  rankA: "A Rank",
+  rankP: "P Rank",
+  rankPPP: "PPP Rank",
+  rankPM: "+/- Rank",
+  rankW: "W Rank",
+  rankSV: "SV% Rank",
+  rankGAA: "GAA Rank",
+};
+
+const HIDDEN_STORAGE_KEY = "nhl_stats_hidden";
+const hiddenPlayers = new Set(loadHidden());
+
+function loadHidden() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(HIDDEN_STORAGE_KEY) || "[]");
+    return Array.isArray(stored) ? stored : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+function saveHidden() {
+  localStorage.setItem(HIDDEN_STORAGE_KEY, JSON.stringify([...hiddenPlayers]));
+}
+
+function resetHidden() {
+  hiddenPlayers.clear();
+  localStorage.removeItem(HIDDEN_STORAGE_KEY);
+}
+
 /// Sort table
 function columnIsNumeric(data, colKey) {
   if (!Array.isArray(data)) return false;
@@ -21,6 +64,11 @@ function buildTable(data) {
   const columns = Object.keys(data[0] || {});
   const numericMap = {};
 
+  const thHide = document.createElement("th");
+  thHide.className = "col-hide";
+  thHide.title = "Hide player";
+  headerRow.appendChild(thHide);
+
   const thNum = document.createElement("th");
   thNum.textContent = "#";
   headerRow.appendChild(thNum);
@@ -32,7 +80,7 @@ function buildTable(data) {
     btn.type = "button";
     btn.className = "sort-btn";
 
-    btn.textContent = col;
+    btn.textContent = HEADER_LABELS[col] || col;
     btn.dataset.col = col;
     th.appendChild(btn);
     headerRow.appendChild(th);
@@ -52,7 +100,7 @@ function buildTable(data) {
         sortState.asc = !sortState.asc;
       } else {
         sortState.col = colKey;
-        sortState.asc = numeric ? false : true;
+        sortState.asc = RANK_COLS.has(colKey) ? true : numeric ? false : true;
       }
 
       data.sort((a, b) => {
@@ -126,13 +174,40 @@ function buildTable(data) {
     data.forEach((item) => {
       const tr = document.createElement("tr");
 
-      const tdNum = document.createElement("td");
-      tdNum.textContent = ++index;
-      tr.appendChild(tdNum);
+      const hidden = hiddenPlayers.has(item.ID);
+      tr.classList.toggle("row-hidden", hidden);
+
+      const tdHide = document.createElement("td");
+      tdHide.className = "col-hide";
+      const hideCheck = document.createElement("input");
+      hideCheck.type = "checkbox";
+      hideCheck.className = "hide-check";
+      hideCheck.checked = hidden;
+      hideCheck.addEventListener("change", () => {
+        if (hideCheck.checked) {
+          hiddenPlayers.add(item.ID);
+        } else {
+          hiddenPlayers.delete(item.ID);
+        }
+        saveHidden();
+        tr.classList.toggle("row-hidden", hideCheck.checked);
+      });
+      tdHide.appendChild(hideCheck);
+      tr.appendChild(tdHide);
+
+      if (!hidden) {
+        const tdNum = document.createElement("td");
+        tdNum.textContent = ++index;
+        tr.appendChild(tdNum);
+      }
 
       columns.forEach((col) => {
         const td = document.createElement("td");
-        td.textContent = item[col];
+        if (RANK_COLS.has(col)) {
+          td.textContent = `${item[col]}/${item.poolSize}`;
+        } else {
+          td.textContent = item[col];
+        }
 
         td.classList.add(`col-${col}`);
 
@@ -228,4 +303,4 @@ function renderPlayers(data) {
   container.appendChild(buildTable(data));
 }
 
-export { columnIsNumeric, buildTable, renderPlayers };
+export { columnIsNumeric, buildTable, renderPlayers, resetHidden };

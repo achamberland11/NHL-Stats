@@ -58,6 +58,29 @@ tbody tr:hover td.value-bad {
   display: none;
 }
 
+.col-rankG,
+.col-rankA,
+.col-rankP,
+.col-rankPPP,
+.col-rankPM,
+.col-rankW,
+.col-rankSV,
+.col-rankGAA,
+.col-poolSize {
+  display: none;
+}
+
+body.show-ranks .col-rankG,
+body.show-ranks .col-rankA,
+body.show-ranks .col-rankP,
+body.show-ranks .col-rankPPP,
+body.show-ranks .col-rankPM,
+body.show-ranks .col-rankW,
+body.show-ranks .col-rankSV,
+body.show-ranks .col-rankGAA {
+  display: table-cell;
+}
+
 .sort-btn {
   all: unset;
   display: block;
@@ -99,4 +122,17 @@ tbody tr:hover td.value-bad {
 .value-bad {
   color: var(--color-text-dark);
   background: var(--color-value-bad);
+}
+
+.col-hide {
+  width: 2rem;
+  text-align: center;
+}
+
+.hide-check {
+  cursor: pointer;
+}
+
+tr.row-hidden {
+  display: none;
 }

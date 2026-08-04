@@ -209,9 +209,47 @@ function addGoalerValueFields(data) {
   return data;
 }
 
+const SKATER_RANK_CONFIG = [
+  { key: "G", rankKey: "rankG", ascending: false },
+  { key: "A", rankKey: "rankA", ascending: false },
+  { key: "P", rankKey: "rankP", ascending: false },
+  { key: "PPP", rankKey: "rankPPP", ascending: false },
+  { key: "+/-", rankKey: "rankPM", ascending: false },
+];
+
+const GOALIE_RANK_CONFIG = [
+  { key: "W", rankKey: "rankW", ascending: false },
+  { key: "SV%", rankKey: "rankSV", ascending: false },
+  { key: "GAA", rankKey: "rankGAA", ascending: true },
+];
+
+function addCategoryRanks(data, config) {
+  if (!Array.isArray(data) || data.length === 0) return data;
+  const poolSize = data.length;
+
+  for (const { key, rankKey, ascending } of config) {
+    const sorted = [...data].sort((a, b) => {
+      const av = Number(a[key]);
+      const bv = Number(b[key]);
+      const aSafe = Number.isFinite(av) ? av : ascending ? Infinity : -Infinity;
+      const bSafe = Number.isFinite(bv) ? bv : ascending ? Infinity : -Infinity;
+      return ascending ? aSafe - bSafe : bSafe - aSafe;
+    });
+    const rankMap = new Map();
+    sorted.forEach((player, i) => rankMap.set(player, i + 1));
+    for (const player of data) player[rankKey] = rankMap.get(player);
+  }
+
+  for (const player of data) player.poolSize = poolSize;
+  return data;
+}
+
 export {
   addPlayerValueFields,
   addGoalerValueFields,
+  addCategoryRanks,
+  SKATER_RANK_CONFIG,
+  GOALIE_RANK_CONFIG,
   calculerPlayerValueIndex,
   calculerGoalerValueIndex,
   calculerMoyenneRVI,
