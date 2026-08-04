@@ -41,9 +41,9 @@ h1 {
 .selector,
 .button,
 option {
-  background: var(--glass-bg);
+  background: var(--glass-bg-hover);
   color: var(--color-text);
-  border: 1px solid var(--glass-border);
+  border: 1px solid var(--glass-border-hover);
   border-radius: var(--border-radius-sm);
   padding: 0.5rem 0.75rem;
   font-size: 0.9rem;
@@ -55,17 +55,10 @@ option {
     border-color 0.2s;
 }
 
-.selector:hover,
-.button:hover,
-option:hover {
-  background: var(--glass-bg-hover);
-  border-color: var(--glass-border-hover);
-}
-
 .selector:checked,
 .button:checked {
-  background: var(--glass-bg);
-  border-color: var(--glass-border);
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-hover);
 }
 
 .button {
