@@ -1,4 +1,4 @@
-import { VALUE_WEIGHTS } from "./config.js";
+import { LEAGUE_CONFIG, VALUE_WEIGHTS } from "./config.js";
 
 ////// Calculer moyennes
 function calculerMoyenneGoals(data) {
@@ -252,6 +252,135 @@ function addCategoryRanks(data, config) {
   return data;
 }
 
+////// Roto value (Z-score)
+const PACE_COLS = [
+  { stat: "G", paceKey: "G82" },
+  { stat: "A", paceKey: "A82" },
+  { stat: "P", paceKey: "P82" },
+  { stat: "PPP", paceKey: "PPP82" },
+  { stat: "+/-", paceKey: "PM82" },
+];
+
+function mean(arr) {
+  if (!arr.length) return 0;
+  return arr.reduce((sum, v) => sum + v, 0) / arr.length;
+}
+
+function stdev(arr) {
+  if (arr.length < 2) return 0;
+  const m = mean(arr);
+  return Math.sqrt(
+    arr.reduce((sum, v) => sum + (v - m) * (v - m), 0) / arr.length,
+  );
+}
+
+function eligible(data, minGP) {
+  return data.filter((p) => (Number(p.GP) || 0) >= minGP);
+}
+
+function categoryZ(cats, inverted, pool) {
+  return cats.map((cat, i) => {
+    const vals = [];
+    for (const p of pool) {
+      const v = Number(p[cat]);
+      if (Number.isFinite(v)) vals.push(v);
+    }
+    const m = mean(vals);
+    const sd = stdev(vals);
+    const zMap = new Map();
+    for (const p of pool) {
+      const v = Number(p[cat]);
+      if (!Number.isFinite(v)) {
+        zMap.set(p, 0);
+        continue;
+      }
+      const z = sd === 0 ? 0 : (v - m) / sd;
+      zMap.set(p, inverted[i] ? -z : z);
+    }
+    return zMap;
+  });
+}
+
+function assignRoto(pool, cats, inverted, targetKey) {
+  const weights = LEAGUE_CONFIG.categoryWeights;
+  const zMaps = categoryZ(cats, inverted, pool);
+  for (const p of pool) {
+    let total = 0;
+    for (let i = 0; i < cats.length; i++) {
+      total += (weights[cats[i]] ?? 1) * zMaps[i].get(p);
+    }
+    p[targetKey] = Math.round(total * 100) / 100;
+  }
+}
+
+function groupRoto(data, groupFn, cats, inverted, targetKey, minGP) {
+  const groups = new Map();
+  for (const p of eligible(data, minGP)) {
+    const g = groupFn(p);
+    if (g == null) continue;
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g).push(p);
+  }
+  for (const group of groups.values()) {
+    assignRoto(group, cats, inverted, targetKey);
+  }
+}
+
+function computeRotoValues(players) {
+  const cfg = LEAGUE_CONFIG;
+  const cats = cfg.skaterCategories;
+  const inverted = cats.map(() => false);
+  const pool = eligible(players, cfg.minGP);
+
+  for (const p of players) {
+    const gp = Math.max(Number(p.GP) || 0, 1);
+    for (const { stat, paceKey } of PACE_COLS) {
+      p[paceKey] = Math.round(((Number(p[stat]) || 0) / gp) * cfg.paceGames);
+    }
+  }
+
+  assignRoto(pool, cats, inverted, "RotoVal");
+  groupRoto(
+    players,
+    (p) => (p.Position && p.Position.includes("D") ? "D" : "F"),
+    cats,
+    inverted,
+    "RotoVal-Pos",
+    cfg.minGP,
+  );
+  groupRoto(
+    players,
+    (p) => {
+      for (const code of ["C", "L", "R", "D"]) {
+        if (p.Position && p.Position.includes(code)) return code;
+      }
+      return null;
+    },
+    cats,
+    inverted,
+    "RotoVal-PosExact",
+    cfg.minGP,
+  );
+
+  const paceCats = PACE_COLS.map((c) => c.paceKey);
+  assignRoto(pool, paceCats, inverted, "RotoVal-Pace");
+}
+
+function computeGoalieRotoValues(goalies) {
+  const cfg = LEAGUE_CONFIG;
+  const cats = cfg.goalieCategories;
+  const inverted = [false, false, true];
+  const pool = eligible(goalies, cfg.goalieMinGP);
+
+  for (const g of goalies) {
+    const gp = Math.max(Number(g.GP) || 0, 1);
+    g.W82 = Math.round(((Number(g.W) || 0) / gp) * cfg.paceGames);
+  }
+
+  assignRoto(pool, cats, inverted, "RotoVal");
+  assignRoto(pool, ["W82", "SV%", "GAA"], inverted, "RotoVal-Pace");
+}
+
 export {
   addPlayerValueFields,
   addGoalerValueFields,
@@ -262,4 +391,6 @@ export {
   calculerGoalerValueIndex,
   calculerMoyenneRVI,
   computeAverageGVI,
+  computeRotoValues,
+  computeGoalieRotoValues,
 };

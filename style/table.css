@@ -19,11 +19,6 @@ tbody tr:hover td {
   background: rgba(255, 255, 255, 0.06);
 }
 
-tr th:first-child,
-tr td:first-child {
-  max-width: fit-content;
-}
-
 th {
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur-sm));
@@ -90,13 +85,7 @@ body.show-ranks .col-rankGAA {
 
 .cell-name {
   cursor: pointer;
-  display: flex;
   justify-content: space-between;
-}
-
-.cell-name a {
-  text-decoration: none;
-  color: inherit;
 }
 
 .value-peak {
@@ -124,13 +113,26 @@ body.show-ranks .col-rankGAA {
   background: var(--color-value-bad);
 }
 
-.col-hide {
-  width: 2rem;
+.col-options {
+  border-top: none;
   text-align: center;
 }
 
-.hide-check {
+.col-options > * {
+  border: none;
+  border-radius: 3px;
+  background-color: transparent;
   cursor: pointer;
+}
+
+.col-options > *:hover {
+  background-color: rgb(255, 255, 255, 0.12);
+}
+
+.col-options a {
+  text-decoration: none;
+  text-align: center;
+  color: inherit;
 }
 
 tr.row-hidden {

@@ -4,6 +4,8 @@ import {
   addPlayerValueFields,
   addCategoryRanks,
   computeAverageGVI,
+  computeRotoValues,
+  computeGoalieRotoValues,
   SKATER_RANK_CONFIG,
   GOALIE_RANK_CONFIG,
 } from "./stats.js";
@@ -151,6 +153,8 @@ function render() {
     for (const goalie of seasonDataGoaler[s]){
       goalie["AGVI"] = goaliesAGVI.get(goalie.Gardiens) || 0;
     }
+    computeRotoValues(seasonDataPlayer[s]);
+    computeGoalieRotoValues(seasonDataGoaler[s]);
   }
 
   allPlayers = seasonDataPlayer[season];

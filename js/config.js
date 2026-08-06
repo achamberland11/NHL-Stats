@@ -14,6 +14,7 @@ export const LEAGUE_CONFIG = {
   },
   minGP: 20,
   goalieMinGP: 10,
+  paceGames: 82,
   gameLimits: {
     C: 164,
     LW: 164,

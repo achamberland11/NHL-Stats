@@ -12,6 +12,16 @@ const RANK_COLS = new Set([
   "rankGAA",
 ]);
 
+const VALUE_COLS = [
+  "RVI",
+  "GVI",
+  "AGVI",
+  "RotoVal",
+  "RotoVal-Pos",
+  "RotoVal-PosExact",
+  "RotoVal-Pace",
+];
+
 const HEADER_LABELS = {
   rankG: "G Rank",
   rankA: "A Rank",
@@ -21,6 +31,11 @@ const HEADER_LABELS = {
   rankW: "W Rank",
   rankSV: "SV% Rank",
   rankGAA: "GAA Rank",
+  RotoVal: "Z",
+  "RotoVal-Pos": "ZP",
+  "RotoVal-PosExact": "ZPX",
+  "RotoVal-Pace": "Z82",
+  PM82: "+/-82",
 };
 
 const HIDDEN_STORAGE_KEY = "nhl_stats_hidden";
@@ -49,8 +64,27 @@ function columnIsNumeric(data, colKey) {
   if (!Array.isArray(data)) return false;
   return data.every((row) => {
     const v = row[colKey];
-    return v === "" || !isNaN(Number(v));
+    return v == null || v === "" || !isNaN(Number(v));
   });
+}
+
+function applyValueBanding(td, item, col, rankMap, nbr, percentile) {
+  if (item[col] == null) return;
+  const num = Number(item[col]);
+  if (isNaN(num)) return;
+  const rank = rankMap.get(item);
+  if (rank == null) return;
+  if (rank >= nbr - percentile / 2) {
+    td.classList.add("value-peak");
+  } else if (rank >= nbr - 2 * percentile) {
+    td.classList.add("value-high");
+  } else if (rank >= nbr - 3 * percentile) {
+    td.classList.add("value-mid");
+  } else if (rank >= nbr - 4 * percentile) {
+    td.classList.add("value-low");
+  } else {
+    td.classList.add("value-bad");
+  }
 }
 
 /// Build table
@@ -152,53 +186,55 @@ function buildTable(data) {
         : (player["RVI"] = calculerGoalerValueIndex(data, player));
     });
 
-    const RVISorted = [...data].sort(
-      (a, b) => (Number(a["RVI"]) || 0) - (Number(b["RVI"]) || 0),
-    );
-    const GVISorted = [...data].sort(
-      (a, b) => (Number(a["GVI"]) || 0) - (Number(b["GVI"]) || 0),
-    );
-    const AGVISorted = [...data].sort(
-      (a, b) => (Number(a["AGVI"]) || 0) - (Number(b["AGVI"]) || 0),
-    );
-    const RVIRankMap = new Map(RVISorted.map((item, i) => [item, i]));
-    const GVIRankMap = new Map(GVISorted.map((item, i) => [item, i]));
-    const AGVIRankMap = new Map(AGVISorted.map((item, i) => [item, i]));
-    const nbrRVI = RVISorted.length;
-    const nbrGVI = GVISorted.length;
-    const nbrAGVI = AGVISorted.length;
-    const RVIPercentile = Math.floor(nbrRVI / 10);
-    const GVIPercentile = Math.floor(nbrGVI / 10);
-    const AGVIPercentile = Math.floor(nbrAGVI / 10);
+    const rankMaps = {};
+    const nbr = {};
+    const percentiles = {};
+    for (const col of VALUE_COLS) {
+      const sorted = [...data].sort(
+        (a, b) => (Number(a[col]) || 0) - (Number(b[col]) || 0),
+      );
+      rankMaps[col] = new Map(sorted.map((item, i) => [item, i]));
+      nbr[col] = sorted.length;
+      percentiles[col] = Math.floor(sorted.length / 10);
+    }
 
     data.forEach((item) => {
       const tr = document.createElement("tr");
 
-      const hidden = hiddenPlayers.has(item.ID);
-      tr.classList.toggle("row-hidden", hidden);
+      {
+        const hidden = hiddenPlayers.has(item.ID);
+        tr.classList.toggle("row-hidden", hidden);
 
-      const tdHide = document.createElement("td");
-      tdHide.className = "col-hide";
-      const hideCheck = document.createElement("input");
-      hideCheck.type = "checkbox";
-      hideCheck.className = "hide-check";
-      hideCheck.checked = hidden;
-      hideCheck.addEventListener("change", () => {
-        if (hideCheck.checked) {
+        const tdOptions = document.createElement("td");
+        tdOptions.className = "col-options";
+
+        const playerName = item.Joueurs || item.Gardiens;
+        const slug = playerName.toLowerCase().replace(/\s+/g, "-");
+
+        let a = document.createElement("a");
+        a.textContent = "🔗";
+        a.href = `https://www.nhl.com/player/${slug}-${item.ID}`;
+        a.target = "_blank";
+
+        const hideBtn = document.createElement("button");
+        hideBtn.type = "button";
+        hideBtn.textContent = "❌";
+        hideBtn.className = "hide-btn";
+        hideBtn.addEventListener("click", () => {
           hiddenPlayers.add(item.ID);
-        } else {
-          hiddenPlayers.delete(item.ID);
-        }
-        saveHidden();
-        tr.classList.toggle("row-hidden", hideCheck.checked);
-      });
-      tdHide.appendChild(hideCheck);
-      tr.appendChild(tdHide);
+          saveHidden();
+          tr.classList.add("row-hidden");
+        });
+        tdOptions.appendChild(hideBtn);
+        tr.appendChild(tdOptions);
 
-      if (!hidden) {
-        const tdNum = document.createElement("td");
-        tdNum.textContent = ++index;
-        tr.appendChild(tdNum);
+        tdOptions.appendChild(a);
+
+        if (!hidden) {
+          const tdNum = document.createElement("td");
+          tdNum.textContent = ++index;
+          tr.appendChild(tdNum);
+        }
       }
 
       columns.forEach((col) => {
@@ -206,78 +242,19 @@ function buildTable(data) {
         if (RANK_COLS.has(col)) {
           td.textContent = `${item[col]}/${item.poolSize}`;
         } else {
-          td.textContent = item[col];
+          const v = item[col];
+          td.textContent = v == null ? "" : v;
         }
 
         td.classList.add(`col-${col}`);
 
-        if (col === "RVI") {
-          const num = Number(item[col]);
-          if (!isNaN(num)) {
-            const rank = RVIRankMap.get(item);
-            if (rank >= nbrRVI - RVIPercentile / 2) {
-              td.classList.add("value-peak");
-            } else if (rank >= nbrRVI - 2 * RVIPercentile) {
-              td.classList.add("value-high");
-            } else if (rank >= nbrRVI - 3 * RVIPercentile) {
-              td.classList.add("value-mid");
-            } else if (rank >= nbrRVI - 4 * RVIPercentile) {
-              td.classList.add("value-low");
-            } else {
-              td.classList.add("value-bad");
-            }
-          }
-        }
-
-        if (col === "GVI") {
-          const num = Number(item[col]);
-          if (!isNaN(num)) {
-            const rank = GVIRankMap.get(item);
-            if (rank >= nbrGVI - GVIPercentile / 2) {
-              td.classList.add("value-peak");
-            } else if (rank >= nbrGVI - 2 * GVIPercentile) {
-              td.classList.add("value-high");
-            } else if (rank >= nbrGVI - 3 * GVIPercentile) {
-              td.classList.add("value-mid");
-            } else if (rank >= nbrGVI - 4 * GVIPercentile) {
-              td.classList.add("value-low");
-            } else {
-              td.classList.add("value-bad");
-            }
-          }
-        }
-
-        if (col === "AGVI") {
-          const num = Number(item[col]);
-          if (!isNaN(num)) {
-            const rank = AGVIRankMap.get(item);
-            if (rank >= nbrAGVI - AGVIPercentile / 2) {
-              td.classList.add("value-peak");
-            } else if (rank >= nbrAGVI - 2 * AGVIPercentile) {
-              td.classList.add("value-high");
-            } else if (rank >= nbrAGVI - 3 * AGVIPercentile) {
-              td.classList.add("value-mid");
-            } else if (rank >= nbrAGVI - 4 * AGVIPercentile) {
-              td.classList.add("value-low");
-            } else {
-              td.classList.add("value-bad");
-            }
-          }
+        if (VALUE_COLS.includes(col)) {
+          applyValueBanding(td, item, col, rankMaps[col], nbr[col], percentiles[col]);
         }
 
         if (col === "Joueurs" || col === "Gardiens") {
-          const playerName = item.Joueurs || item.Gardiens;
-          const slug = playerName.toLowerCase().replace(/\s+/g, "-");
-
           td.classList.add("cell-name");
           td.addEventListener("click", () => openPlayerCard(item));
-
-          let a = document.createElement("a");
-          a.textContent = "🔗";
-          a.href = `https://www.nhl.com/player/${slug}-${item.ID}`;
-          a.target = "_blank";
-
-          td.appendChild(a);
         }
 
         tr.appendChild(td);
