@@ -9,7 +9,14 @@ import {
   SKATER_RANK_CONFIG,
   GOALIE_RANK_CONFIG,
 } from "./stats.js";
-import { renderPlayers, resetHidden } from "./table.js";
+import {
+  renderPlayers,
+  resetHidden,
+  getCompareIds,
+  clearCompare,
+  onCompareChange,
+} from "./table.js";
+import { openCompareModal } from "./compare.js";
 
 const positionSelect = document.getElementById("positionFilter");
 const defaultPosition = "All";
@@ -114,6 +121,33 @@ function render() {
     render();
   });
 
+  const compareBtn = document.getElementById("compareBtn");
+  const updateCompareBtn = (ids) => {
+    const n = ids.size;
+    compareBtn.disabled = n < 2;
+    compareBtn.textContent = `Compare (${n})`;
+  };
+  onCompareChange(updateCompareBtn);
+  updateCompareBtn(getCompareIds());
+
+  compareBtn.addEventListener("click", () => {
+    const ids = getCompareIds();
+    const byId = new Map();
+    for (const p of allPlayers) byId.set(p.ID, p);
+    for (const g of goalies) byId.set(g.ID, g);
+
+    const selected = [...ids].map((id) => byId.get(id)).filter(Boolean);
+    const skaters = selected.filter((p) => p.Joueurs);
+    const goaliesSel = selected.filter((p) => p.Gardiens);
+
+    if (skaters.length && goaliesSel.length) {
+      alert("Cannot compare skaters and goalies together.");
+      return;
+    }
+    const sameType = skaters.length ? skaters : goaliesSel;
+    if (sameType.length >= 2) openCompareModal(sameType, season);
+  });
+
   const birthDates = await loadRosterBirthDates();
 
   const seasonResults = await Promise.all(
@@ -167,6 +201,7 @@ function render() {
     allPlayers = seasonDataPlayer[season];
     goalies = seasonDataGoaler[season];
 
+    clearCompare();
     render();
   });
 

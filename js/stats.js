@@ -326,6 +326,34 @@ function groupRoto(data, groupFn, cats, inverted, targetKey, minGP) {
   }
 }
 
+function computeZScores(players, cats, inverted) {
+  const pool = eligible(players, LEAGUE_CONFIG.minGP);
+  const zMaps = categoryZ(cats, inverted, pool);
+  const result = new Map();
+  for (const p of pool) {
+    const perCat = {};
+    for (let i = 0; i < cats.length; i++) {
+      perCat[cats[i]] = Math.round(zMaps[i].get(p) * 100) / 100;
+    }
+    result.set(p, perCat);
+  }
+  return result;
+}
+
+function computeGoalieZScores(goalies, cats, inverted) {
+  const pool = eligible(goalies, LEAGUE_CONFIG.goalieMinGP);
+  const zMaps = categoryZ(cats, inverted, pool);
+  const result = new Map();
+  for (const p of pool) {
+    const perCat = {};
+    for (let i = 0; i < cats.length; i++) {
+      perCat[cats[i]] = Math.round(zMaps[i].get(p) * 100) / 100;
+    }
+    result.set(p, perCat);
+  }
+  return result;
+}
+
 function computeRotoValues(players) {
   const cfg = LEAGUE_CONFIG;
   const cats = cfg.skaterCategories;
@@ -393,4 +421,6 @@ export {
   computeAverageGVI,
   computeRotoValues,
   computeGoalieRotoValues,
+  computeZScores,
+  computeGoalieZScores,
 };

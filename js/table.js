@@ -59,6 +59,43 @@ function resetHidden() {
   localStorage.removeItem(HIDDEN_STORAGE_KEY);
 }
 
+const MAX_COMPARE = 5;
+const compareIds = new Set();
+const compareListeners = new Set();
+
+function notifyCompareChange() {
+  for (const fn of compareListeners) fn(getCompareIds());
+}
+
+function toggleCompare(id) {
+  if (compareIds.has(id)) {
+    compareIds.delete(id);
+  } else {
+    if (compareIds.size >= MAX_COMPARE) return false;
+    compareIds.add(id);
+  }
+  notifyCompareChange();
+  return true;
+}
+
+function isCompareSelected(id) {
+  return compareIds.has(id);
+}
+
+function getCompareIds() {
+  return new Set(compareIds);
+}
+
+function clearCompare() {
+  compareIds.clear();
+  notifyCompareChange();
+}
+
+function onCompareChange(fn) {
+  compareListeners.add(fn);
+  return () => compareListeners.delete(fn);
+}
+
 /// Sort table
 function columnIsNumeric(data, colKey) {
   if (!Array.isArray(data)) return false;
@@ -225,10 +262,33 @@ function buildTable(data) {
           saveHidden();
           tr.classList.add("row-hidden");
         });
+
+        const cmpBtn = document.createElement("button");
+        cmpBtn.type = "button";
+        cmpBtn.textContent = "⚖️";
+        cmpBtn.title = "Add to comparison";
+        cmpBtn.className = "compare-btn";
+        cmpBtn.classList.toggle("compare-on", isCompareSelected(item.ID));
+        cmpBtn.addEventListener("click", () => {
+          if (!toggleCompare(item.ID)) {
+            cmpBtn.textContent = "🙅";
+            setTimeout(() => (cmpBtn.textContent = "⚖️"), 900);
+            return;
+          }
+          cmpBtn.classList.toggle("compare-on", isCompareSelected(item.ID));
+          tr.classList.toggle(
+            "compare-selected",
+            isCompareSelected(item.ID),
+          );
+        });
+
         tdOptions.appendChild(hideBtn);
+        tdOptions.appendChild(cmpBtn);
         tr.appendChild(tdOptions);
 
         tdOptions.appendChild(a);
+
+        if (isCompareSelected(item.ID)) tr.classList.add("compare-selected");
 
         if (!hidden) {
           const tdNum = document.createElement("td");
@@ -280,4 +340,15 @@ function renderPlayers(data) {
   container.appendChild(buildTable(data));
 }
 
-export { columnIsNumeric, buildTable, renderPlayers, resetHidden };
+export {
+  columnIsNumeric,
+  buildTable,
+  renderPlayers,
+  resetHidden,
+  toggleCompare,
+  isCompareSelected,
+  getCompareIds,
+  clearCompare,
+  onCompareChange,
+  MAX_COMPARE,
+};
