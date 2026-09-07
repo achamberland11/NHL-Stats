@@ -37,6 +37,41 @@ const TEAMS = [
   "WSH",
 ];
 
+const TEAM_SLUGS = {
+  ANA: "anaheim-ducks",
+  BOS: "boston-bruins",
+  BUF: "buffalo-sabres",
+  CAR: "carolina-hurricanes",
+  CBJ: "columbus-blue-jackets",
+  CGY: "calgary-flames",
+  CHI: "chicago-blackhawks",
+  COL: "colorado-avalanche",
+  DAL: "dallas-stars",
+  DET: "detroit-red-wings",
+  EDM: "edmonton-oilers",
+  FLA: "florida-panthers",
+  LAK: "los-angeles-kings",
+  MIN: "minnesota-wild",
+  MTL: "montreal-canadiens",
+  NJD: "new-jersey-devils",
+  NSH: "nashville-predators",
+  NYI: "new-york-islanders",
+  NYR: "new-york-rangers",
+  OTT: "ottawa-senators",
+  PHI: "philadelphia-flyers",
+  PIT: "pittsburgh-penguins",
+  SEA: "seattle-kraken",
+  SJS: "san-jose-sharks",
+  STL: "st-louis-blues",
+  TBL: "tampa-bay-lightning",
+  TOR: "toronto-maple-leafs",
+  UTA: "utah-hockey-club",
+  VAN: "vancouver-canucks",
+  VGK: "vegas-golden-knights",
+  WPG: "winnipeg-jets",
+  WSH: "washington-capitals",
+};
+
 async function fetchWithCache(url, cacheKey, ttl = CACHE_TTL) {
   const cached = localStorage.getItem(cacheKey);
   if (cached) {
@@ -160,4 +195,5 @@ export {
   loadGoalies,
   loadPlayerLanding,
   loadRosterBirthDates,
+  TEAM_SLUGS,
 };

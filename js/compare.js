@@ -1,5 +1,7 @@
 import { computeZScores, computeGoalieZScores } from "./stats.js";
 import { LEAGUE_CONFIG } from "./config.js";
+import { loadPlayerLanding } from "./api.js";
+import { populatePlayerCard } from "./playerCard.js";
 
 const PLAYER_COLORS = [
   "#e74c3c",
@@ -20,11 +22,6 @@ function isGoalieRow(p) {
 
 function nameOf(p) {
   return p.Joueurs || p.Gardiens || "?";
-}
-
-function closeModal(overlay, keyHandler) {
-  document.removeEventListener("keydown", keyHandler);
-  overlay.remove();
 }
 
 function buildTableSection(players, title) {
@@ -115,7 +112,7 @@ function buildTableSection(players, title) {
   return section;
 }
 
-function buildRadarSection(players) {
+function buildChartContainer(players) {
   const goalie = isGoalieRow(players[0]);
   const cats = goalie
     ? LEAGUE_CONFIG.goalieCategories
@@ -125,19 +122,10 @@ function buildRadarSection(players) {
     ? computeGoalieZScores(players, cats, inverted)
     : computeZScores(players, cats, inverted);
 
-  const section = document.createElement("div");
-  section.className = "compare-section";
-
-  const titleEl = document.createElement("div");
-  titleEl.className = "compare-section-title";
-  titleEl.textContent = "League Z-Score Radar";
-  section.appendChild(titleEl);
-
   const container = document.createElement("div");
   container.className = "compare-chart-container";
   const canvas = document.createElement("canvas");
   container.appendChild(canvas);
-  section.appendChild(container);
 
   const datasets = players
     .filter((p) => zScores.has(p))
@@ -168,56 +156,206 @@ function buildRadarSection(players) {
     });
   });
 
+  return container;
+}
+
+function fillBio(bio, data) {
+  bio.textContent = "";
+  bio.appendChild(createBioText(data));
+}
+
+function createBioText(data) {
+  const frag = document.createDocumentFragment();
+  const teamLogo = document.createElement("img");
+  teamLogo.className = "inline-icon";
+  teamLogo.src = data.teamLogo;
+  teamLogo.alt = "";
+  frag.appendChild(teamLogo);
+
+  const heightFt = Math.floor(data.heightInInches / 12);
+  const heightIn = data.heightInInches % 12;
+  const parts = [
+    `#${data.sweaterNumber}`,
+    data.position,
+    `${heightFt}'${heightIn}"`,
+    `${data.weightInPounds} lbs`,
+  ].filter(Boolean);
+  frag.appendChild(document.createTextNode(parts.join(" · ")));
+  return frag;
+}
+
+function buildPlayerList(players, onOpenCard, onRemove) {
+  const list = document.createElement("div");
+  list.className = "compare-player-list";
+
+  const items = new Map();
+  players.forEach((p) => {
+    const item = document.createElement("div");
+    item.className = "compare-player-item";
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "compare-player-remove";
+    removeBtn.textContent = "\u00d7";
+    removeBtn.title = "Remove from comparison";
+    removeBtn.addEventListener("click", () => {
+      if (onRemove) onRemove(p);
+    });
+
+    const headshot = document.createElement("img");
+    headshot.className = "compare-player-headshot";
+    headshot.alt = "";
+    headshot.hidden = true;
+
+    const info = document.createElement("div");
+    info.className = "compare-player-info";
+
+    const name = document.createElement("span");
+    name.className = "compare-player-name";
+    name.textContent = nameOf(p);
+    name.title = "Open player card";
+    name.addEventListener("click", () => onOpenCard(p));
+
+    const bio = document.createElement("div");
+    bio.className = "compare-player-bio";
+    bio.textContent = `${p.Team || ""}${p.Position?.length ? " · " + p.Position.join("/") : ""}`;
+
+    info.appendChild(name);
+    info.appendChild(bio);
+    item.appendChild(removeBtn);
+    item.appendChild(headshot);
+    item.appendChild(info);
+    list.appendChild(item);
+    items.set(p.ID, { headshot, bio });
+  });
+
+  Promise.all(
+    players.map(async (p) => {
+      const data = await loadPlayerLanding(p.ID);
+      if (!data) return;
+      const el = items.get(p.ID);
+      if (!el) return;
+      el.headshot.hidden = false;
+      el.headshot.src = data.headshot;
+      fillBio(el.bio, data);
+    }),
+  );
+
+  return list;
+}
+
+function buildRadarSection(players, onOpenCard, onRemove) {
+  const section = document.createElement("div");
+  section.className = "compare-section";
+
+  const titleEl = document.createElement("div");
+  titleEl.className = "compare-section-title";
+  titleEl.textContent = "League Z-Score Radar";
+  section.appendChild(titleEl);
+
+  const row = document.createElement("div");
+  row.className = "compare-radar-row";
+  row.appendChild(buildChartContainer(players));
+  row.appendChild(buildPlayerList(players, onOpenCard, onRemove));
+  section.appendChild(row);
+
   return section;
 }
 
-export function openCompareModal(players, season) {
+export function openCompareModal(players, season, onRemovePlayer) {
   const overlay = document.createElement("div");
   overlay.className = "player-card-overlay";
 
-  const card = document.createElement("div");
-  card.className = "compare-card";
+  let remaining = players.slice();
+  let activePanel = null;
 
-  const closeBtn = document.createElement("button");
-  closeBtn.className = "player-card-close";
-  closeBtn.textContent = "\u00d7";
-  card.appendChild(closeBtn);
+  const closePlayerPanel = () => {
+    if (activePanel) {
+      activePanel.remove();
+      activePanel = null;
+      overlay.classList.remove("compare-with-panel");
+    }
+  };
 
-  const title = document.createElement("div");
-  title.className = "compare-title";
-  title.textContent = "Player Comparison";
-  card.appendChild(title);
-
-  const body = document.createElement("div");
-  body.className = "compare-body";
-  card.appendChild(body);
-
-  const goalie = isGoalieRow(players[0]);
-  const ordered = players.slice().sort((a, b) => {
-    const ka = goalie ? a.rankGAA : a.rankP;
-    const kb = goalie ? b.rankGAA : b.rankP;
-    return (ka ?? Infinity) - (kb ?? Infinity);
-  });
-
-  body.appendChild(
-    buildTableSection(
-      ordered,
-      `${season ? formatSeason(season) + " " : ""}Stats`,
-    ),
-  );
-
-  const radar = buildRadarSection(ordered);
-  if (radar) body.appendChild(radar);
-
-  overlay.appendChild(card);
-  document.body.appendChild(overlay);
+  const closeModal = () => {
+    document.removeEventListener("keydown", keyHandler);
+    overlay.remove();
+  };
 
   const keyHandler = (e) => {
-    if (e.key === "Escape") closeModal(overlay, keyHandler);
+    if (e.key !== "Escape") return;
+    if (activePanel) {
+      closePlayerPanel();
+    } else {
+      closeModal();
+    }
   };
+
+  const openPlayerPanel = (player) => {
+    closePlayerPanel();
+    const panel = document.createElement("div");
+    panel.className = "player-card-panel";
+    overlay.appendChild(panel);
+    overlay.classList.add("compare-with-panel");
+    activePanel = panel;
+    populatePlayerCard(panel, player, closePlayerPanel);
+  };
+
+  const removePlayer = (player) => {
+    if (onRemovePlayer) onRemovePlayer(player.ID);
+    remaining = remaining.filter((p) => p.ID !== player.ID);
+    if (remaining.length < 2) {
+      closeModal();
+      return;
+    }
+    closePlayerPanel();
+    renderCard();
+  };
+
+  function renderCard() {
+    overlay.innerHTML = "";
+
+    const card = document.createElement("div");
+    card.className = "compare-card";
+
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "player-card-close";
+    closeBtn.textContent = "\u00d7";
+    closeBtn.addEventListener("click", closeModal);
+    card.appendChild(closeBtn);
+
+    const title = document.createElement("div");
+    title.className = "compare-title";
+    title.textContent = "Player Comparison";
+    card.appendChild(title);
+
+    const body = document.createElement("div");
+    body.className = "compare-body";
+    card.appendChild(body);
+
+    const goalie = isGoalieRow(remaining[0]);
+    const ordered = remaining.slice().sort((a, b) => {
+      const ka = goalie ? a.rankGAA : a.rankP;
+      const kb = goalie ? b.rankGAA : b.rankP;
+      return (ka ?? Infinity) - (kb ?? Infinity);
+    });
+
+    body.appendChild(
+      buildTableSection(
+        ordered,
+        `${season ? formatSeason(season) + " " : ""}Stats`,
+      ),
+    );
+    body.appendChild(buildRadarSection(ordered, openPlayerPanel, removePlayer));
+
+    overlay.appendChild(card);
+  }
+
   document.addEventListener("keydown", keyHandler);
-  closeBtn.addEventListener("click", () => closeModal(overlay, keyHandler));
+  renderCard();
+  document.body.appendChild(overlay);
+
   overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) closeModal(overlay, keyHandler);
+    if (e.target === overlay) closeModal();
   });
 }

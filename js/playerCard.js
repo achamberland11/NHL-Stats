@@ -397,27 +397,11 @@ function closeCard(overlay, keyHandler) {
   overlay.remove();
 }
 
-export async function openPlayerCard(player) {
-  const overlay = document.createElement("div");
-  overlay.className = "player-card-overlay";
-
-  const card = document.createElement("div");
-  card.className = "player-card";
-
+export async function populatePlayerCard(card, player, onClose) {
   const loading = document.createElement("div");
   loading.className = "player-card-loading";
   loading.textContent = "Loading...";
   card.appendChild(loading);
-  overlay.appendChild(card);
-  document.body.appendChild(overlay);
-
-  const keyHandler = (e) => {
-    if (e.key === "Escape") closeCard(overlay, keyHandler);
-  };
-  document.addEventListener("keydown", keyHandler);
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) closeCard(overlay, keyHandler);
-  });
 
   const data = await loadPlayerLanding(player.ID);
   if (!data) {
@@ -430,7 +414,7 @@ export async function openPlayerCard(player) {
   const closeBtn = document.createElement("button");
   closeBtn.className = "player-card-close";
   closeBtn.textContent = "\u00d7";
-  closeBtn.addEventListener("click", () => closeCard(overlay, keyHandler));
+  closeBtn.addEventListener("click", () => onClose());
   card.appendChild(closeBtn);
 
   card.appendChild(buildHeaderSection(data));
@@ -486,4 +470,25 @@ export async function openPlayerCard(player) {
   nhlLink.target = "_blank";
   nhlLink.textContent = "View on NHL.com \u2192";
   card.appendChild(nhlLink);
+}
+
+export async function openPlayerCard(player) {
+  const overlay = document.createElement("div");
+  overlay.className = "player-card-overlay";
+
+  const card = document.createElement("div");
+  card.className = "player-card";
+
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+
+  const keyHandler = (e) => {
+    if (e.key === "Escape") closeCard(overlay, keyHandler);
+  };
+  document.addEventListener("keydown", keyHandler);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeCard(overlay, keyHandler);
+  });
+
+  await populatePlayerCard(card, player, () => closeCard(overlay, keyHandler));
 }

@@ -12,6 +12,7 @@ import {
 import {
   renderPlayers,
   resetHidden,
+  toggleCompare,
   getCompareIds,
   clearCompare,
   onCompareChange,
@@ -145,7 +146,7 @@ function render() {
       return;
     }
     const sameType = skaters.length ? skaters : goaliesSel;
-    if (sameType.length >= 2) openCompareModal(sameType, season);
+    if (sameType.length >= 2) openCompareModal(sameType, season, (id) => toggleCompare(id));
   });
 
   const birthDates = await loadRosterBirthDates();

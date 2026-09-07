@@ -1,5 +1,6 @@
 import { calculerPlayerValueIndex, calculerGoalerValueIndex } from "./stats.js";
 import { openPlayerCard } from "./playerCard.js";
+import { TEAM_SLUGS } from "./api.js";
 
 const RANK_COLS = new Set([
   "rankG",
@@ -301,6 +302,19 @@ function buildTable(data) {
         const td = document.createElement("td");
         if (RANK_COLS.has(col)) {
           td.textContent = `${item[col]}/${item.poolSize}`;
+        } else if (col === "Team") {
+          const slug = TEAM_SLUGS[item.Team];
+          if (slug) {
+            const a = document.createElement("a");
+            a.className = "team-link";
+            a.href = `https://www.dailyfaceoff.com/teams/${slug}/line-combinations`;
+            a.target = "_blank";
+            a.rel = "noopener";
+            a.textContent = item.Team;
+            td.appendChild(a);
+          } else {
+            td.textContent = item.Team == null ? "" : item.Team;
+          }
         } else {
           const v = item[col];
           td.textContent = v == null ? "" : v;
