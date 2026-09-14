@@ -1,5 +1,6 @@
 import { seasons, seasonDataPlayer, seasonDataGoaler } from "./app.js";
 import { loadPlayerLanding } from "./api.js";
+import { FIELD_INFO, SECTION_INFO } from "./fields.js";
 
 function formatSeason(yyyyyyyy) {
   const s = String(yyyyyyyy);
@@ -92,6 +93,7 @@ function buildHeaderSection(data) {
         `Current Season (${formatSeason(data.featuredStats.season)})`,
         sub,
         labels,
+        SECTION_INFO.currentSeason,
       ),
     );
   }
@@ -117,7 +119,7 @@ function buildHeaderSection(data) {
         ["avgToi", "Avg TOI"],
       ];
     statsContainer.appendChild(
-      buildStatsSection("Career (NHL Regular Season)", career, labels),
+      buildStatsSection("Career (NHL Regular Season)", career, labels, SECTION_INFO.career),
     );
   }
 
@@ -130,13 +132,14 @@ function buildHeaderSection(data) {
   return header;
 }
 
-function buildStatsSection(title, stats, labels) {
+function buildStatsSection(title, stats, labels, sectionTip = "") {
   const section = document.createElement("div");
   section.className = "player-card-section";
 
   const titleEl = document.createElement("div");
   titleEl.className = "player-card-section-title";
   titleEl.textContent = title;
+  titleEl.title = sectionTip;
   section.appendChild(titleEl);
 
   const grid = document.createElement("div");
@@ -149,6 +152,7 @@ function buildStatsSection(title, stats, labels) {
     const lbl = document.createElement("div");
     lbl.className = "player-card-stat-label";
     lbl.textContent = label;
+    lbl.title = FIELD_INFO[label] || "";
     const val = document.createElement("div");
     val.className = "player-card-stat-value";
     val.textContent =
@@ -172,6 +176,7 @@ function buildSeasonsStatsSection(playerID, seasons, seasonData, goalie) {
   const title = document.createElement("div");
   title.className = "player-card-section-title";
   title.textContent = "Seasons Stats";
+  title.title = SECTION_INFO.seasons;
   section.appendChild(title);
 
   const table = document.createElement("table");
@@ -185,6 +190,8 @@ function buildSeasonsStatsSection(playerID, seasons, seasonData, goalie) {
   headers.forEach((h) => {
     const th = document.createElement("th");
     th.textContent = h;
+    const info = FIELD_INFO[h];
+    if (info) th.title = info;
     headerRow.appendChild(th);
   });
   thead.appendChild(headerRow);
@@ -241,6 +248,7 @@ function buildLast5Section(last5, goalie) {
   const title = document.createElement("div");
   title.className = "player-card-section-title";
   title.textContent = "Last 5 Games";
+  title.title = SECTION_INFO.last5;
   section.appendChild(title);
 
   const table = document.createElement("table");
@@ -254,6 +262,8 @@ function buildLast5Section(last5, goalie) {
   headers.forEach((h) => {
     const th = document.createElement("th");
     th.textContent = h;
+    const info = FIELD_INFO[h];
+    if (info) th.title = info;
     headerRow.appendChild(th);
   });
   thead.appendChild(headerRow);
@@ -340,6 +350,7 @@ function buildGraphSection(playerID, seasons, seasonData, goalie) {
   const title = document.createElement("div");
   title.className = "player-card-section-title";
   title.textContent = "Stat Progression";
+  title.title = SECTION_INFO.progression;
   section.appendChild(title);
 
   const container = document.createElement("div");
@@ -376,6 +387,7 @@ function buildAwardsSection(awards) {
   const title = document.createElement("div");
   title.className = "player-card-section-title";
   title.textContent = "Awards";
+  title.title = SECTION_INFO.awards;
   section.appendChild(title);
 
   const list = document.createElement("ul");
@@ -468,6 +480,7 @@ export async function populatePlayerCard(card, player, onClose) {
   nhlLink.className = "player-card-nhl-link";
   nhlLink.href = `https://www.nhl.com/player/${slug}`;
   nhlLink.target = "_blank";
+  nhlLink.title = "Open player's NHL.com page (new tab)";
   nhlLink.textContent = "View on NHL.com \u2192";
   card.appendChild(nhlLink);
 }

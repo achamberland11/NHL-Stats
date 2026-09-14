@@ -1,6 +1,7 @@
 import { calculerPlayerValueIndex, calculerGoalerValueIndex } from "./stats.js";
 import { openPlayerCard } from "./playerCard.js";
 import { TEAM_SLUGS } from "./api.js";
+import { FIELD_INFO } from "./fields.js";
 
 const RANK_COLS = new Set([
   "rankG",
@@ -154,6 +155,8 @@ function buildTable(data) {
 
     btn.textContent = HEADER_LABELS[col] || col;
     btn.dataset.col = col;
+    const info = FIELD_INFO[col];
+    if (info) btn.title = info;
     th.appendChild(btn);
     headerRow.appendChild(th);
 
@@ -253,11 +256,13 @@ function buildTable(data) {
         a.textContent = "🔗";
         a.href = `https://www.nhl.com/player/${slug}-${item.ID}`;
         a.target = "_blank";
+        a.title = "Open player's NHL.com page (new tab)";
 
         const hideBtn = document.createElement("button");
         hideBtn.type = "button";
         hideBtn.textContent = "❌";
         hideBtn.className = "hide-btn";
+        hideBtn.title = "Hide player";
         hideBtn.addEventListener("click", () => {
           hiddenPlayers.add(item.ID);
           saveHidden();

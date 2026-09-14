@@ -2,6 +2,7 @@ import { computeZScores, computeGoalieZScores } from "./stats.js";
 import { LEAGUE_CONFIG } from "./config.js";
 import { loadPlayerLanding } from "./api.js";
 import { populatePlayerCard } from "./playerCard.js";
+import { FIELD_INFO, SECTION_INFO } from "./fields.js";
 
 const PLAYER_COLORS = [
   "#e74c3c",
@@ -24,13 +25,14 @@ function nameOf(p) {
   return p.Joueurs || p.Gardiens || "?";
 }
 
-function buildTableSection(players, title) {
+function buildTableSection(players, title, tip = "") {
   const section = document.createElement("div");
   section.className = "compare-section";
 
   const titleEl = document.createElement("div");
   titleEl.className = "compare-section-title";
   titleEl.textContent = title;
+  titleEl.title = tip;
   section.appendChild(titleEl);
 
   const goalie = isGoalieRow(players[0]);
@@ -52,6 +54,7 @@ function buildTableSection(players, title) {
   const headRow = document.createElement("tr");
   const thLabel = document.createElement("th");
   thLabel.textContent = title;
+  thLabel.title = tip;
   headRow.appendChild(thLabel);
   players.forEach((p, i) => {
     const th = document.createElement("th");
@@ -68,6 +71,7 @@ function buildTableSection(players, title) {
     const tdLabel = document.createElement("td");
     tdLabel.textContent = label;
     tdLabel.className = "compare-row-label";
+    tdLabel.title = FIELD_INFO[key] || FIELD_INFO[label] || "";
     tr.appendChild(tdLabel);
 
     let bestIdx = null;
@@ -251,6 +255,7 @@ function buildRadarSection(players, onOpenCard, onRemove) {
   const titleEl = document.createElement("div");
   titleEl.className = "compare-section-title";
   titleEl.textContent = "League Z-Score Radar";
+  titleEl.title = SECTION_INFO.radar;
   section.appendChild(titleEl);
 
   const row = document.createElement("div");
@@ -327,6 +332,7 @@ export function openCompareModal(players, season, onRemovePlayer) {
     const title = document.createElement("div");
     title.className = "compare-title";
     title.textContent = "Player Comparison";
+    title.title = SECTION_INFO.comparison;
     card.appendChild(title);
 
     const body = document.createElement("div");
@@ -344,6 +350,7 @@ export function openCompareModal(players, season, onRemovePlayer) {
       buildTableSection(
         ordered,
         `${season ? formatSeason(season) + " " : ""}Stats`,
+        SECTION_INFO.stats,
       ),
     );
     body.appendChild(buildRadarSection(ordered, openPlayerPanel, removePlayer));
