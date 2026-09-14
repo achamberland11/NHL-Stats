@@ -211,8 +211,21 @@ function render() {
     render();
   });
 
+  const clearSearchBtn = document.getElementById("clearSearchBtn");
+  const updateClearBtn = () => {
+    clearSearchBtn.hidden = !searchInput.value;
+  };
+
   searchInput.addEventListener("input", () => {
+    updateClearBtn();
     render();
+  });
+
+  clearSearchBtn.addEventListener("click", () => {
+    searchInput.value = "";
+    updateClearBtn();
+    render();
+    searchInput.focus();
   });
 })();
 

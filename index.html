@@ -33,7 +33,10 @@
       <option value="20212022">2021-22</option>
     </select>
 
-    <input id="searchInput" type="text" class="selector" placeholder="Search player or team..." title="Search by player name or team abbreviation." />
+    <div class="search-wrap">
+      <input id="searchInput" type="text" class="selector" placeholder="Search player or team..." title="Search by player name or team abbreviation." />
+      <button id="clearSearchBtn" type="button" class="search-clear" title="Clear search" aria-label="Clear search" hidden>×</button>
+    </div>
 
     <label class="toggle-label">
       <input type="checkbox" id="ranksToggle" title="Show columns with each category's league rank." />
