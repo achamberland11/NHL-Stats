@@ -61,9 +61,15 @@ function resetHidden() {
   localStorage.removeItem(HIDDEN_STORAGE_KEY);
 }
 
+function resetHighlight() {
+  highlightedPlayers.clear();
+}
+
 const MAX_COMPARE = 5;
 const compareIds = new Set();
 const compareListeners = new Set();
+
+const highlightedPlayers = new Set();
 
 function notifyCompareChange() {
   for (const fn of compareListeners) fn(getCompareIds());
@@ -288,13 +294,37 @@ function buildTable(data) {
           );
         });
 
+        const hlBtn = document.createElement("button");
+        hlBtn.type = "button";
+        hlBtn.textContent = "⭐";
+        hlBtn.title = "Highlight player";
+        hlBtn.className = "highlight-btn";
+        hlBtn.classList.toggle("highlight-on", highlightedPlayers.has(item.ID));
+        hlBtn.addEventListener("click", () => {
+          if (highlightedPlayers.has(item.ID)) {
+            highlightedPlayers.delete(item.ID);
+          } else {
+            highlightedPlayers.add(item.ID);
+          }
+          hlBtn.classList.toggle(
+            "highlight-on",
+            highlightedPlayers.has(item.ID),
+          );
+          tr.classList.toggle(
+            "row-highlighted",
+            highlightedPlayers.has(item.ID),
+          );
+        });
+
         tdOptions.appendChild(hideBtn);
         tdOptions.appendChild(cmpBtn);
+        tdOptions.appendChild(hlBtn);
         tr.appendChild(tdOptions);
 
         tdOptions.appendChild(a);
 
         if (isCompareSelected(item.ID)) tr.classList.add("compare-selected");
+        if (highlightedPlayers.has(item.ID)) tr.classList.add("row-highlighted");
 
         if (!hidden) {
           const tdNum = document.createElement("td");
@@ -364,6 +394,7 @@ export {
   buildTable,
   renderPlayers,
   resetHidden,
+  resetHighlight,
   toggleCompare,
   isCompareSelected,
   getCompareIds,

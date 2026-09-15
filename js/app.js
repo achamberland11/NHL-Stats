@@ -12,6 +12,7 @@ import {
 import {
   renderPlayers,
   resetHidden,
+  resetHighlight,
   toggleCompare,
   getCompareIds,
   clearCompare,
@@ -26,7 +27,7 @@ let allPlayers = [];
 let goalies = [];
 
 const seasonSelect = document.getElementById("seasonFilter");
-const defaultSeason = "20252026";
+const defaultSeason = "20262027";
 seasonSelect.value = defaultSeason;
 
 const searchInput = document.getElementById("searchInput");
@@ -44,7 +45,7 @@ const Position = {
   G: "G",
 };
 
-const seasons = ["20252026", "20242025", "20232024", "20222023", "20212022"];
+const seasons = ["20262027", "20252026", "20242025", "20232024", "20222023", "20212022"];
 const seasonDataPlayer = {};
 const seasonDataGoaler = {};
 
@@ -119,6 +120,16 @@ function render() {
 
   document.getElementById("resetHideBtn").addEventListener("click", () => {
     resetHidden();
+    render();
+  });
+
+  document.getElementById("resetHighlightBtn").addEventListener("click", () => {
+    resetHighlight();
+    render();
+  });
+
+  document.getElementById("resetCompareBtn").addEventListener("click", () => {
+    clearCompare();
     render();
   });
 
