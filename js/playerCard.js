@@ -399,6 +399,13 @@ function buildGraphSection(playerID, seasons, seasonData, goalie) {
     option.textContent = formatSeason(s);
     seasonSelect.appendChild(option);
   });
+  const modeBtn = document.createElement("button");
+  modeBtn.className = "button";
+  modeBtn.type = "button";
+  modeBtn.textContent = "Cumulative";
+  modeBtn.hidden = true;
+  modeBtn.title = "Switch between cumulative totals and per-game values.";
+  header.appendChild(modeBtn);
   header.appendChild(seasonSelect);
   section.appendChild(header);
 
@@ -407,6 +414,8 @@ function buildGraphSection(playerID, seasons, seasonData, goalie) {
   section.appendChild(container);
 
   let chart = null;
+  let seasonView = "cumulative";
+  let seasonGames = null;
 
   function replaceChart(data, message) {
     if (chart) {
@@ -465,41 +474,45 @@ function buildGraphSection(playerID, seasons, seasonData, goalie) {
     replaceChart({ labels, datasets });
   }
 
-  async function renderSeasonChart(season) {
-    const gameLog = await loadGameLog(playerID, season);
-    if (!gameLog?.gameLog) {
-      replaceChart({ labels: [], datasets: [] }, "Failed to load game log.");
-      return;
-    }
-
-    const games = [...gameLog.gameLog].reverse();
-    const labels = games.map((_, i) => i + 1);
-
+  function seasonDatasets(games, mode) {
     const stats = goalie ? ["W", "GAA", "SV%"] : ["G", "A", "P", "PPP", "+/-"];
 
-    const datasets = stats.flatMap((stat) => {
+    return stats.map((stat) => {
       const color = colorMap[stat] || "#000000";
-      return [
-        {
-          label: stat,
-          data: cumulativeGameValue(games, stat, goalie),
-          borderColor: color,
-          tension: 0,
-          fill: false,
-        },
-        {
-          label: `${stat} (game)`,
-          data: games.map((g) => rawGameValue(g, stat, goalie)),
-          borderColor: color,
-          borderDash: [4, 4],
-          borderWidth: 1.5,
-          pointRadius: 0,
-          tension: 0,
-          fill: false,
-        },
-      ];
+      const cumulative = mode === "cumulative";
+      return cumulative
+        ? {
+            label: stat,
+            data: cumulativeGameValue(games, stat, goalie),
+            borderColor: color,
+            tension: 0,
+            fill: false,
+          }
+        : {
+            label: `${stat} (game)`,
+            data: games.map((g) => rawGameValue(g, stat, goalie)),
+            borderColor: color,
+            borderDash: [4, 4],
+            borderWidth: 1.5,
+            pointRadius: 0,
+            tension: 0,
+            fill: false,
+          };
     });
+  }
 
+  async function renderSeasonChart(season) {
+    if (!seasonGames) {
+      const gameLog = await loadGameLog(playerID, season);
+      if (!gameLog?.gameLog) {
+        replaceChart({ labels: [], datasets: [] }, "Failed to load game log.");
+        return;
+      }
+      seasonGames = [...gameLog.gameLog].reverse();
+    }
+
+    const labels = seasonGames.map((_, i) => i + 1);
+    const datasets = seasonDatasets(seasonGames, seasonView);
     replaceChart({ labels, datasets });
   }
 
@@ -507,11 +520,22 @@ function buildGraphSection(playerID, seasons, seasonData, goalie) {
 
   seasonSelect.addEventListener("change", () => {
     if (seasonSelect.value === "") {
+      modeBtn.hidden = true;
       renderCareerChart();
     } else {
+      modeBtn.hidden = false;
+      seasonView = "cumulative";
+      modeBtn.textContent = "Cumulative";
       replaceChart({ labels: [], datasets: [] }, "Loading...");
       renderSeasonChart(seasonSelect.value);
     }
+  });
+
+  modeBtn.addEventListener("click", () => {
+    if (!seasonGames) return;
+    seasonView = seasonView === "cumulative" ? "pergame" : "cumulative";
+    modeBtn.textContent = seasonView === "cumulative" ? "Cumulative" : "Per game";
+    renderSeasonChart(seasonSelect.value);
   });
 
   return section;

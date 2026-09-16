@@ -56,7 +56,7 @@ export const SECTION_INFO = {
   career: "Career totals across all NHL regular seasons.",
   seasons: "Year-by-year stats for each season available in the season selector.",
   last5: "The player's last 5 games played.",
-  progression: "Chart of each category across the seasons shown above. Use the dropdown to chart a single season game by game (solid line = cumulative total, dashed = that game's value).",
+  progression: "Chart of each category across the seasons shown above. Use the dropdown to chart a single season; the button toggles between cumulative totals and per-game values.",
   awards: "Trophies and honors won during the player's career.",
   comparison: "Side-by-side comparison of the selected players.",
   stats: "Season stats for the selected players. The best value in each row is bolded.",
