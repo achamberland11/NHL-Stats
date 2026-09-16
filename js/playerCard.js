@@ -1,5 +1,5 @@
 import { seasons, seasonDataPlayer, seasonDataGoaler } from "./app.js";
-import { loadPlayerLanding } from "./api.js";
+import { loadGameLog, loadPlayerLanding } from "./api.js";
 import { FIELD_INFO, SECTION_INFO } from "./fields.js";
 
 function formatSeason(yyyyyyyy) {
@@ -307,15 +307,56 @@ function buildLast5Section(last5, goalie) {
   return section;
 }
 
+const GAME_KEYS = {
+  G: "goals",
+  A: "assists",
+  P: "points",
+  PPP: "powerPlayPoints",
+  "+/-": "plusMinus",
+};
+
+function rawGameValue(game, stat, goalie) {
+  if (goalie) {
+    if (stat === "W") return game.decision === "W" ? 1 : 0;
+    if (stat === "GAA") return game.goalsAgainst ?? null;
+    if (stat === "SV%") return game.savePctg != null ? game.savePctg * 100 : null;
+    return null;
+  }
+  const val = game[GAME_KEYS[stat]];
+  return val ?? 0;
+}
+
+function cumulativeGameValue(games, stat, goalie) {
+  let sum = 0;
+  let wins = 0;
+  let goalsAgainst = 0;
+  let shotsAgainst = 0;
+  return games.map((game, i) => {
+    if (goalie) {
+      if (stat === "W") {
+        if (game.decision === "W") wins += 1;
+        return wins;
+      }
+      if (stat === "GAA") {
+        goalsAgainst += game.goalsAgainst || 0;
+        return goalsAgainst / (i + 1);
+      }
+      if (stat === "SV%") {
+        goalsAgainst += game.goalsAgainst || 0;
+        shotsAgainst += game.shotsAgainst || 0;
+        return shotsAgainst > 0
+          ? ((shotsAgainst - goalsAgainst) / shotsAgainst) * 100
+          : null;
+      }
+      return null;
+    }
+    sum += game[GAME_KEYS[stat]] || 0;
+    return sum;
+  });
+}
+
 function buildGraphSection(playerID, seasons, seasonData, goalie) {
   if (!seasons || seasons.length === 0) return null;
-
-  const reversed = [...seasons].reverse();
-  const labels = reversed.map((s) => s.slice(0, 4) + "-" + s.slice(6));
-
-  const stats = goalie
-    ? ["GP", "W", "GAA", "SV%", "GVI"]
-    : ["GP", "G", "A", "P", "PPP", "+/-", "GVI"];
 
   const colorMap = {
     GP: "#95a5a6",
@@ -330,50 +371,147 @@ function buildGraphSection(playerID, seasons, seasonData, goalie) {
     "SV%": "#3498db",
   };
 
-  const datasets = stats.map((stat) => ({
-    label: stat,
-    data: reversed.map((s) => {
-      const player = seasonData[s]?.find((p) => p.ID === playerID);
-      if (!player) return null;
-      let val = player[stat];
-      if (stat === "SV%" && val != null) val = val * 100;
-      return val;
-    }),
-    borderColor: colorMap[stat] || "#000000",
-    tension: 0,
-    fill: false,
-  }));
+  const playedSeasons = seasons.filter((s) =>
+    seasonData[s]?.some((p) => p.ID === playerID),
+  );
 
   const section = document.createElement("div");
   section.className = "player-card-section";
+
+  const header = document.createElement("div");
+  header.className = "player-card-section-header";
 
   const title = document.createElement("div");
   title.className = "player-card-section-title";
   title.textContent = "Stat Progression";
   title.title = SECTION_INFO.progression;
-  section.appendChild(title);
+  header.appendChild(title);
+
+  const seasonSelect = document.createElement("select");
+  seasonSelect.className = "selector";
+  const careerOption = document.createElement("option");
+  careerOption.value = "";
+  careerOption.textContent = "Career";
+  seasonSelect.appendChild(careerOption);
+  playedSeasons.forEach((s) => {
+    const option = document.createElement("option");
+    option.value = s;
+    option.textContent = formatSeason(s);
+    seasonSelect.appendChild(option);
+  });
+  header.appendChild(seasonSelect);
+  section.appendChild(header);
 
   const container = document.createElement("div");
   container.className = "chart-container";
-
-  const canvas = document.createElement("canvas");
-  canvas.className = "chart-canvas";
-  container.appendChild(canvas);
   section.appendChild(container);
 
-  requestAnimationFrame(() => {
-    new window.Chart(canvas, {
-      type: "line",
-      data: { labels, datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: "bottom", labels: { boxWidth: 12, padding: 8 } } },
-        scales: {
-          x: { ticks: { maxRotation: 0 } },
+  let chart = null;
+
+  function replaceChart(data, message) {
+    if (chart) {
+      chart.destroy();
+      chart = null;
+    }
+    container.textContent = "";
+    if (message) {
+      const loading = document.createElement("div");
+      loading.className = "player-card-loading";
+      loading.textContent = message;
+      container.appendChild(loading);
+      return;
+    }
+    const canvas = document.createElement("canvas");
+    canvas.className = "chart-canvas";
+    container.appendChild(canvas);
+    requestAnimationFrame(() => {
+      chart = new window.Chart(canvas, {
+        type: "line",
+        data,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: "bottom", labels: { boxWidth: 12, padding: 8 } } },
+          scales: {
+            x: { ticks: { maxRotation: 0 } },
+          },
         },
-      },
+      });
     });
+  }
+
+  function renderCareerChart() {
+    const reversed = [...seasons].reverse();
+    const labels = reversed.map((s) => s.slice(0, 4) + "-" + s.slice(6));
+
+    const stats = goalie
+      ? ["GP", "W", "GAA", "SV%", "GVI"]
+      : ["GP", "G", "A", "P", "PPP", "+/-", "GVI"];
+
+    const datasets = stats.map((stat) => ({
+      label: stat,
+      data: reversed.map((s) => {
+        const player = seasonData[s]?.find((p) => p.ID === playerID);
+        if (!player) return null;
+        let val = player[stat];
+        if (stat === "SV%" && val != null) val = val * 100;
+        return val;
+      }),
+      borderColor: colorMap[stat] || "#000000",
+      tension: 0,
+      fill: false,
+    }));
+
+    replaceChart({ labels, datasets });
+  }
+
+  async function renderSeasonChart(season) {
+    const gameLog = await loadGameLog(playerID, season);
+    if (!gameLog?.gameLog) {
+      replaceChart({ labels: [], datasets: [] }, "Failed to load game log.");
+      return;
+    }
+
+    const games = [...gameLog.gameLog].reverse();
+    const labels = games.map((_, i) => i + 1);
+
+    const stats = goalie ? ["W", "GAA", "SV%"] : ["G", "A", "P", "PPP", "+/-"];
+
+    const datasets = stats.flatMap((stat) => {
+      const color = colorMap[stat] || "#000000";
+      return [
+        {
+          label: stat,
+          data: cumulativeGameValue(games, stat, goalie),
+          borderColor: color,
+          tension: 0,
+          fill: false,
+        },
+        {
+          label: `${stat} (game)`,
+          data: games.map((g) => rawGameValue(g, stat, goalie)),
+          borderColor: color,
+          borderDash: [4, 4],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          tension: 0,
+          fill: false,
+        },
+      ];
+    });
+
+    replaceChart({ labels, datasets });
+  }
+
+  renderCareerChart();
+
+  seasonSelect.addEventListener("change", () => {
+    if (seasonSelect.value === "") {
+      renderCareerChart();
+    } else {
+      replaceChart({ labels: [], datasets: [] }, "Loading...");
+      renderSeasonChart(seasonSelect.value);
+    }
   });
 
   return section;

@@ -158,6 +158,19 @@ async function loadPlayerLanding(playerId) {
   }
 }
 
+async function loadGameLog(playerId, season) {
+  try {
+    const url = `/api-web/v1/player/${playerId}/game-log/${season}/2`;
+    return await fetchWithCache(
+      url,
+      CACHE_KEY + "_gamelog_" + season + "_" + playerId,
+    );
+  } catch (err) {
+    console.error("Failed to load game log:", err);
+    return null;
+  }
+}
+
 async function loadRosterBirthDates() {
   const results = await Promise.all(
     TEAMS.map(async (team) => {
@@ -193,6 +206,7 @@ export {
   fetchWithCache,
   loadPlayers,
   loadGoalies,
+  loadGameLog,
   loadPlayerLanding,
   loadRosterBirthDates,
   TEAM_SLUGS,
