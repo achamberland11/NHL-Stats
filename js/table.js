@@ -133,7 +133,7 @@ function applyValueBanding(td, item, col, rankMap, nbr, percentile) {
 }
 
 /// Build table
-function buildTable(data) {
+function buildTable(data, options = {}) {
   const sortState = { col: null, asc: true };
   const table = document.createElement("table");
 
@@ -250,7 +250,8 @@ function buildTable(data) {
 
       {
         const hidden = hiddenPlayers.has(item.ID);
-        tr.classList.toggle("row-hidden", hidden);
+        if (!options.showHidden) tr.classList.toggle("row-hidden", hidden);
+        if (hidden) tr.classList.add("row-removed");
 
         const tdOptions = document.createElement("td");
         tdOptions.className = "col-options";
@@ -266,14 +267,25 @@ function buildTable(data) {
 
         const hideBtn = document.createElement("button");
         hideBtn.type = "button";
-        hideBtn.textContent = "❌";
         hideBtn.className = "hide-btn";
-        hideBtn.title = "Hide player";
-        hideBtn.addEventListener("click", () => {
-          hiddenPlayers.add(item.ID);
-          saveHidden();
-          tr.classList.add("row-hidden");
-        });
+        if (options.showHidden) {
+          hideBtn.textContent = "✔";
+          hideBtn.title = "Add back to list";
+          hideBtn.classList.add("restore-btn");
+          hideBtn.addEventListener("click", () => {
+            hiddenPlayers.delete(item.ID);
+            saveHidden();
+            tr.remove();
+          });
+        } else {
+          hideBtn.textContent = "❌";
+          hideBtn.title = "Hide player";
+          hideBtn.addEventListener("click", () => {
+            hiddenPlayers.add(item.ID);
+            saveHidden();
+            tr.classList.add("row-hidden");
+          });
+        }
 
         const cmpBtn = document.createElement("button");
         cmpBtn.type = "button";
@@ -326,7 +338,7 @@ function buildTable(data) {
         if (isCompareSelected(item.ID)) tr.classList.add("compare-selected");
         if (highlightedPlayers.has(item.ID)) tr.classList.add("row-highlighted");
 
-        if (!hidden) {
+        if (!hidden || options.showHidden) {
           const tdNum = document.createElement("td");
           tdNum.textContent = ++index;
           tr.appendChild(tdNum);
@@ -378,7 +390,7 @@ function buildTable(data) {
   return table;
 }
 
-function renderPlayers(data) {
+function renderPlayers(data, options) {
   const container = document.getElementById("playersContainer");
   if (!container) return console.error("Missing #playersContainer");
   if (!data.length) {
@@ -386,13 +398,18 @@ function renderPlayers(data) {
     return;
   }
   container.textContent = "";
-  container.appendChild(buildTable(data));
+  container.appendChild(buildTable(data, options));
+}
+
+function isHidden(id) {
+  return hiddenPlayers.has(id);
 }
 
 export {
   columnIsNumeric,
   buildTable,
   renderPlayers,
+  isHidden,
   resetHidden,
   resetHighlight,
   toggleCompare,

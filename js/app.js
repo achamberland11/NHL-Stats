@@ -13,6 +13,7 @@ import {
   renderPlayers,
   resetHidden,
   resetHighlight,
+  isHidden,
   toggleCompare,
   getCompareIds,
   clearCompare,
@@ -43,6 +44,7 @@ const Position = {
   RW: "RW",
   D: "D",
   G: "G",
+  REMOVED: "Removed",
 };
 
 const seasons = ["20262027", "20252026", "20242025", "20232024", "20222023", "20212022"];
@@ -99,11 +101,21 @@ function computeAge(birthDate, season) {
 }
 
 function render() {
-  const filtered = filterBySearch(
-    filterByPosition(allPlayers, positionFilter),
-    searchInput.value,
-  );
-  renderPlayers(filtered);
+  const removedView = positionFilter === Position.REMOVED;
+  let filtered;
+  if (removedView) {
+    const distinct = new Map();
+    for (const p of [...allPlayers, ...goalies]) {
+      if (isHidden(p.ID)) distinct.set(p.ID, p);
+    }
+    filtered = filterBySearch([...distinct.values()], searchInput.value);
+  } else {
+    filtered = filterBySearch(
+      filterByPosition(allPlayers, positionFilter),
+      searchInput.value,
+    );
+  }
+  renderPlayers(filtered, { showHidden: removedView });
 }
 
 (async () => {

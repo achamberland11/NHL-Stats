@@ -191,6 +191,19 @@ tr.row-highlighted {
   outline-offset: -1px;
 }
 
+tr.row-removed td {
+  opacity: 0.6;
+}
+
+.restore-btn {
+  color: #2ecc71;
+  font-weight: bold;
+}
+
+.restore-btn:hover {
+  background: rgba(46, 204, 113, 0.18);
+}
+
 tr.row-hidden {
   display: none;
 }
