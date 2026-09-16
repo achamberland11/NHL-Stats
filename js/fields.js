@@ -60,5 +60,5 @@ export const SECTION_INFO = {
   awards: "Trophies and honors won during the player's career.",
   comparison: "Side-by-side comparison of the selected players.",
   stats: "Season stats for the selected players. The best value in each row is bolded.",
-  radar: "Radar of league z-scores per category, plus the list of selected players.",
+  radar: "Per-category z-scores for the selected players. Use the dropdown to choose the reference pool (compared players, same position group or all players).",
 };

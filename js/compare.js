@@ -1,4 +1,4 @@
-import { computeZScores, computeGoalieZScores } from "./stats.js";
+import { computeRadarZScores } from "./stats.js";
 import { LEAGUE_CONFIG } from "./config.js";
 import { loadPlayerLanding } from "./api.js";
 import { populatePlayerCard } from "./playerCard.js";
@@ -116,15 +116,21 @@ function buildTableSection(players, title, tip = "") {
   return section;
 }
 
-function buildChartContainer(players) {
+function buildChartContainer(players, leaguePool, mode) {
   const goalie = isGoalieRow(players[0]);
   const cats = goalie
     ? LEAGUE_CONFIG.goalieCategories
     : LEAGUE_CONFIG.skaterCategories;
   const inverted = goalie ? [false, false, true] : cats.map(() => false);
-  const zScores = goalie
-    ? computeGoalieZScores(players, cats, inverted)
-    : computeZScores(players, cats, inverted);
+  const minGP = goalie ? LEAGUE_CONFIG.goalieMinGP : LEAGUE_CONFIG.minGP;
+  const zScores = computeRadarZScores(
+    players,
+    leaguePool,
+    mode,
+    cats,
+    inverted,
+    minGP,
+  );
 
   const container = document.createElement("div");
   container.className = "compare-chart-container";
@@ -142,7 +148,7 @@ function buildChartContainer(players) {
     }));
 
   requestAnimationFrame(() => {
-    new window.Chart(canvas, {
+    const chart = new window.Chart(canvas, {
       type: "radar",
       data: { labels: cats, datasets },
       options: {
@@ -158,6 +164,7 @@ function buildChartContainer(players) {
         },
       },
     });
+    container.chart = chart;
   });
 
   return container;
@@ -248,26 +255,64 @@ function buildPlayerList(players, onOpenCard, onRemove) {
   return list;
 }
 
-function buildRadarSection(players, onOpenCard, onRemove) {
+function buildRadarSection(players, onOpenCard, onRemove, leaguePool) {
   const section = document.createElement("div");
   section.className = "compare-section";
 
+  const goalie = isGoalieRow(players[0]);
+
+  const header = document.createElement("div");
+  header.className = "compare-radar-header";
+
   const titleEl = document.createElement("div");
   titleEl.className = "compare-section-title";
-  titleEl.textContent = "League Z-Score Radar";
+  titleEl.textContent = "Z-Score Radar";
   titleEl.title = SECTION_INFO.radar;
-  section.appendChild(titleEl);
+  header.appendChild(titleEl);
+
+  const modeSelect = document.createElement("select");
+  modeSelect.className = "selector";
+  modeSelect.title = "Reference pool used to compute the z-scores.";
+  const modes = [
+    ["selected", "vs compared players"],
+  ];
+  if (!goalie) {
+    modes.push(["group", "vs same group"]);
+    modes.push(["position", "vs same position"]);
+  }
+  modes.push(["league", "vs all players"]);
+  for (const [value, label] of modes) {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = label;
+    modeSelect.appendChild(opt);
+  }
+  modeSelect.value = "league";
+
+  header.appendChild(titleEl);
+  header.appendChild(modeSelect);
+  section.appendChild(header);
 
   const row = document.createElement("div");
   row.className = "compare-radar-row";
-  row.appendChild(buildChartContainer(players));
+  row.appendChild(buildChartContainer(players, leaguePool, modeSelect.value));
   row.appendChild(buildPlayerList(players, onOpenCard, onRemove));
   section.appendChild(row);
+
+  modeSelect.addEventListener("change", () => {
+    const oldContainer = row.querySelector(".compare-chart-container");
+    if (oldContainer) {
+      if (oldContainer.chart) oldContainer.chart.destroy();
+      oldContainer.replaceWith(
+        buildChartContainer(players, leaguePool, modeSelect.value),
+      );
+    }
+  });
 
   return section;
 }
 
-export function openCompareModal(players, season, onRemovePlayer) {
+export function openCompareModal(players, season, onRemovePlayer, leaguePool = players) {
   const overlay = document.createElement("div");
   overlay.className = "player-card-overlay";
 
@@ -353,7 +398,7 @@ export function openCompareModal(players, season, onRemovePlayer) {
         SECTION_INFO.stats,
       ),
     );
-    body.appendChild(buildRadarSection(ordered, openPlayerPanel, removePlayer));
+    body.appendChild(buildRadarSection(ordered, openPlayerPanel, removePlayer, leaguePool));
 
     overlay.appendChild(card);
   }

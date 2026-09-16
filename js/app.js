@@ -169,7 +169,12 @@ function render() {
       return;
     }
     const sameType = skaters.length ? skaters : goaliesSel;
-    if (sameType.length >= 2) openCompareModal(sameType, season, (id) => toggleCompare(id));
+    if (sameType.length >= 2) {
+      const leaguePool = skaters.length
+        ? seasonDataPlayer[season]
+        : seasonDataGoaler[season];
+      openCompareModal(sameType, season, (id) => toggleCompare(id), leaguePool);
+    }
   });
 
   const birthDates = await loadRosterBirthDates();

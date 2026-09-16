@@ -354,6 +354,79 @@ function computeGoalieZScores(goalies, cats, inverted) {
   return result;
 }
 
+function zScoresFor(pool, cats, inverted) {
+  const zMaps = categoryZ(cats, inverted, pool);
+  const result = new Map();
+  for (const p of pool) {
+    const perCat = {};
+    for (let i = 0; i < cats.length; i++) {
+      perCat[cats[i]] = Math.round(zMaps[i].get(p) * 100) / 100;
+    }
+    result.set(p, perCat);
+  }
+  return result;
+}
+
+function isForward(p) {
+  return !(p.Position && p.Position.includes("D"));
+}
+
+function positionCode(p) {
+  for (const code of ["C", "L", "R", "D"]) {
+    if (p.Position && p.Position.includes(code)) return code;
+  }
+  return null;
+}
+
+function computeRadarZScores(players, leaguePool, mode, cats, inverted, minGP) {
+  if (mode === "selected") {
+    return zScoresFor(eligible(players, minGP), cats, inverted);
+  }
+  if (mode === "league") {
+    return zScoresFor(eligible(leaguePool, minGP), cats, inverted);
+  }
+
+  if (mode === "group") {
+    const groupZ = zScoresFor(
+      eligible(leaguePool.filter(isForward), minGP),
+      cats,
+      inverted,
+    );
+    const defenceZ = zScoresFor(
+      eligible(leaguePool.filter((p) => !isForward(p)), minGP),
+      cats,
+      inverted,
+    );
+    const result = new Map();
+    for (const p of players) {
+      const zMap = isForward(p) ? groupZ : defenceZ;
+      const z = zMap.get(p);
+      if (z) result.set(p, z);
+    }
+    return result;
+  }
+
+  const positionZ = new Map();
+  for (const code of ["C", "L", "R", "D"]) {
+    positionZ.set(
+      code,
+      zScoresFor(
+        eligible(leaguePool.filter((p) => positionCode(p) === code), minGP),
+        cats,
+        inverted,
+      ),
+    );
+  }
+  const result = new Map();
+  for (const p of players) {
+    const zMap = positionZ.get(positionCode(p));
+    if (!zMap) continue;
+    const z = zMap.get(p);
+    if (z) result.set(p, z);
+  }
+  return result;
+}
+
 function computeRotoValues(players) {
   const cfg = LEAGUE_CONFIG;
   const cats = cfg.skaterCategories;
@@ -423,4 +496,5 @@ export {
   computeGoalieRotoValues,
   computeZScores,
   computeGoalieZScores,
+  computeRadarZScores,
 };
