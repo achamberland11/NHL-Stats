@@ -14,6 +14,17 @@ const RANK_COLS = new Set([
   "rankGAA",
 ]);
 
+const CATEGORY_RANKS = {
+  G: "rankG",
+  A: "rankA",
+  P: "rankP",
+  PPP: "rankPPP",
+  "+/-": "rankPM",
+  W: "rankW",
+  "SV%": "rankSV",
+  GAA: "rankGAA",
+};
+
 const VALUE_COLS = [
   "RVI",
   "GVI",
@@ -140,7 +151,9 @@ function buildTable(data, options = {}) {
   const thead = document.createElement("thead");
   const headerRow = document.createElement("tr");
 
-  const columns = Object.keys(data[0] || {});
+  const columns = Object.keys(data[0] || {}).filter(
+    (col) => !RANK_COLS.has(col),
+  );
   const numericMap = {};
 
   const thHide = document.createElement("th");
@@ -347,9 +360,7 @@ function buildTable(data, options = {}) {
 
       columns.forEach((col) => {
         const td = document.createElement("td");
-        if (RANK_COLS.has(col)) {
-          td.textContent = `${item[col]}/${item.poolSize}`;
-        } else if (col === "Team") {
+        if (col === "Team") {
           const slug = TEAM_SLUGS[item.Team];
           if (slug) {
             const a = document.createElement("a");
@@ -365,6 +376,13 @@ function buildTable(data, options = {}) {
         } else {
           const v = item[col];
           td.textContent = v == null ? "" : v;
+          const rankKey = CATEGORY_RANKS[col];
+          if (rankKey && item[rankKey] != null) {
+            const rank = document.createElement("span");
+            rank.className = "cell-rank";
+            rank.textContent = `#${item[rankKey]}`;
+            td.appendChild(rank);
+          }
         }
 
         td.classList.add(`col-${col}`);
