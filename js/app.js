@@ -1,4 +1,4 @@
-import { CACHE_KEY, loadPlayers, loadGoalies, loadRosterBirthDates } from "./api.js";
+import { CACHE_KEY, loadPlayers, loadGoalies, loadRosterBirthDates, loadSkaterRealtime } from "./api.js";
 import {
   addGoalerValueFields,
   addPlayerValueFields,
@@ -18,6 +18,9 @@ import {
   getCompareIds,
   clearCompare,
   onCompareChange,
+  getVisibleRotoCategories,
+  getVisibleGoalieRotoCategories,
+  onColumnVisibilityChange,
 } from "./table.js";
 import { openCompareModal } from "./compare.js";
 
@@ -122,6 +125,7 @@ function render() {
   document.getElementById("refreshBtn").addEventListener("click", () => {
     localStorage.removeItem(CACHE_KEY + "_skaters_" + seasons[0]);
     localStorage.removeItem(CACHE_KEY + "_goalies_" + seasons[0]);
+    localStorage.removeItem(CACHE_KEY + "_skater_realtime_" + seasons[0]);
     location.reload();
   });
 
@@ -181,16 +185,23 @@ function render() {
 
   const seasonResults = await Promise.all(
     seasons.map(async (s) => {
-      const [players, goalies] = await Promise.all([
+      const [players, goalies, realtime] = await Promise.all([
         loadPlayers(s),
         loadGoalies(s),
+        loadSkaterRealtime(s),
       ]);
-      return { s, players, goalies };
+      return { s, players, goalies, realtime };
     }),
   );
 
-  for (const { s, players, goalies } of seasonResults) {
+  for (const { s, players, goalies, realtime } of seasonResults) {
+    const realtimeMap = new Map(realtime.map((r) => [r.playerId, r]));
     for (const player of players) {
+      const rt = realtimeMap.get(player.ID);
+      if (rt) {
+        player.BLK = rt.blockedShots ?? 0;
+        player.HITS = rt.hits ?? 0;
+      }
       player.Age = computeAge(birthDates.get(player.ID), s);
     }
     for (const goalie of goalies) {
@@ -216,19 +227,31 @@ function render() {
     for (const goalie of seasonDataGoaler[s]){
       goalie["AGVI"] = goaliesAGVI.get(goalie.Gardiens) || 0;
     }
-    computeRotoValues(seasonDataPlayer[s]);
-    computeGoalieRotoValues(seasonDataGoaler[s]);
+    computeRotoValues(seasonDataPlayer[s], getVisibleRotoCategories());
+    computeGoalieRotoValues(seasonDataGoaler[s], getVisibleGoalieRotoCategories());
+  }
+
+  function applyRotoVisibility() {
+    computeRotoValues(seasonDataPlayer[season], getVisibleRotoCategories());
+    computeGoalieRotoValues(seasonDataGoaler[season], getVisibleGoalieRotoCategories());
   }
 
   allPlayers = seasonDataPlayer[season];
   goalies = seasonDataGoaler[season];
+  applyRotoVisibility();
   render();
+
+  onColumnVisibilityChange(() => {
+    applyRotoVisibility();
+    render();
+  });
 
   seasonSelect.addEventListener("change", async () => {
     season = seasonSelect.value;
 
     allPlayers = seasonDataPlayer[season];
     goalies = seasonDataGoaler[season];
+    applyRotoVisibility();
 
     clearCompare();
     render();

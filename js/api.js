@@ -119,6 +119,9 @@ async function loadPlayers(season) {
       P: p.points,
       "+/-": p.plusMinus,
       PPP: p.ppPoints,
+      S: p.shots,
+      BLK: 0,
+      HITS: 0,
       TOI: formatTOI(p.timeOnIcePerGame),
       ID: p.playerId,
     }));
@@ -140,6 +143,7 @@ async function loadGoalies(season) {
       W: p.wins,
       "SV%": p.savePct,
       GAA: p.goalsAgainstAverage,
+      SA: p.shotsAgainst,
       ID: p.playerId,
     }));
   } catch (err) {
@@ -155,6 +159,16 @@ async function loadPlayerLanding(playerId) {
   } catch (err) {
     console.error("Failed to load player landing:", err);
     return null;
+  }
+}
+
+async function loadSkaterRealtime(season) {
+  try {
+    const url = `/api/stats/rest/en/skater/realtime?limit=-1&sort=hits&dir=desc&cayenneExp=seasonId=${season}%20and%20gameTypeId=2`;
+    return await fetchWithCache(url, CACHE_KEY + "_skater_realtime_" + season);
+  } catch (err) {
+    console.error("Failed to load skater realtime:", err);
+    return [];
   }
 }
 
@@ -209,5 +223,6 @@ export {
   loadGameLog,
   loadPlayerLanding,
   loadRosterBirthDates,
+  loadSkaterRealtime,
   TEAM_SLUGS,
 };

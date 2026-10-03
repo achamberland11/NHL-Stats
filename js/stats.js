@@ -427,9 +427,8 @@ function computeRadarZScores(players, leaguePool, mode, cats, inverted, minGP) {
   return result;
 }
 
-function computeRotoValues(players) {
+function computeRotoValues(players, cats = LEAGUE_CONFIG.rotoCategories) {
   const cfg = LEAGUE_CONFIG;
-  const cats = cfg.skaterCategories;
   const inverted = cats.map(() => false);
   const pool = eligible(players, cfg.minGP);
 
@@ -463,23 +462,46 @@ function computeRotoValues(players) {
     cfg.minGP,
   );
 
-  const paceCats = PACE_COLS.map((c) => c.paceKey);
-  assignRoto(pool, paceCats, inverted, "RotoVal-Pace");
+  const included = new Set(cats);
+  const paceCats = PACE_COLS.filter((c) => included.has(c.stat)).map(
+    (c) => c.paceKey,
+  );
+  assignRoto(pool, paceCats, paceCats.map(() => false), "RotoVal-Pace");
 }
 
-function computeGoalieRotoValues(goalies) {
+function computeGoalieRotoValues(goalies, cats = LEAGUE_CONFIG.goalieRotoCategories) {
   const cfg = LEAGUE_CONFIG;
-  const cats = cfg.goalieCategories;
-  const inverted = [false, false, true];
+  const inverted = cats.map((c) => c === "GAA");
   const pool = eligible(goalies, cfg.goalieMinGP);
 
   for (const g of goalies) {
     const gp = Math.max(Number(g.GP) || 0, 1);
     g.W82 = Math.round(((Number(g.W) || 0) / gp) * cfg.paceGames);
+    g.SA82 = Math.round(((Number(g.SA) || 0) / gp) * cfg.paceGames);
   }
 
   assignRoto(pool, cats, inverted, "RotoVal");
-  assignRoto(pool, ["W82", "SV%", "GAA"], inverted, "RotoVal-Pace");
+
+  const included = new Set(cats);
+  const paceCats = [];
+  const paceInverted = [];
+  if (included.has("W")) {
+    paceCats.push("W82");
+    paceInverted.push(false);
+  }
+  if (included.has("SV%")) {
+    paceCats.push("SV%");
+    paceInverted.push(false);
+  }
+  if (included.has("GAA")) {
+    paceCats.push("GAA");
+    paceInverted.push(true);
+  }
+  if (included.has("SA")) {
+    paceCats.push("SA82");
+    paceInverted.push(false);
+  }
+  assignRoto(pool, paceCats, paceInverted, "RotoVal-Pace");
 }
 
 export {

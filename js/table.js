@@ -2,6 +2,7 @@ import { calculerPlayerValueIndex, calculerGoalerValueIndex } from "./stats.js";
 import { openPlayerCard } from "./playerCard.js";
 import { TEAM_SLUGS } from "./api.js";
 import { FIELD_INFO } from "./fields.js";
+import { LEAGUE_CONFIG } from "./config.js";
 
 const RANK_COLS = new Set([
   "rankG",
@@ -44,12 +45,65 @@ const HEADER_LABELS = {
   rankW: "W Rank",
   rankSV: "SV% Rank",
   rankGAA: "GAA Rank",
+  S: "S",
+  BLK: "BLK",
+  HITS: "HITS",
+  SA: "SA",
   RotoVal: "Z",
   "RotoVal-Pos": "ZP",
   "RotoVal-PosExact": "ZPX",
   "RotoVal-Pace": "Z82",
   PM82: "+/-82",
 };
+
+const HIDDEN_COLUMNS_STORAGE_KEY = "nhl_stats_hidden_cols";
+const DEFAULT_HIDDEN_COLUMNS = ["S", "BLK", "HITS", "SA"];
+
+const COLUMN_TOGGLES = [
+  ["PPP", "PPP"],
+  ["+/-", "+/-"],
+  ["TOI", "TOI"],
+  ["S", "Shots (S)"],
+  ["BLK", "Blocks (BLK)"],
+  ["HITS", "Hits (HITS)"],
+  ["SA", "Shots against (SA)"],
+];
+
+function loadHiddenColumns() {
+  try {
+    const stored = JSON.parse(
+      localStorage.getItem(HIDDEN_COLUMNS_STORAGE_KEY) || "null",
+    );
+    if (Array.isArray(stored)) return new Set(stored);
+  } catch (err) {
+    console.error("Failed to load hidden columns:", err);
+  }
+  return new Set(DEFAULT_HIDDEN_COLUMNS);
+}
+
+const hiddenColumns = loadHiddenColumns();
+
+function saveHiddenColumns() {
+  localStorage.setItem(
+    HIDDEN_COLUMNS_STORAGE_KEY,
+    JSON.stringify([...hiddenColumns]),
+  );
+}
+
+const visibilityListeners = new Set();
+
+function getVisibleRotoCategories() {
+  return LEAGUE_CONFIG.rotoCategories.filter((c) => !hiddenColumns.has(c));
+}
+
+function getVisibleGoalieRotoCategories() {
+  return LEAGUE_CONFIG.goalieRotoCategories.filter((c) => !hiddenColumns.has(c));
+}
+
+function onColumnVisibilityChange(fn) {
+  visibilityListeners.add(fn);
+  return () => visibilityListeners.delete(fn);
+}
 
 const HIDDEN_STORAGE_KEY = "nhl_stats_hidden";
 const hiddenPlayers = new Set(loadHidden());
@@ -152,7 +206,7 @@ function buildTable(data, options = {}) {
   const headerRow = document.createElement("tr");
 
   const columns = Object.keys(data[0] || {}).filter(
-    (col) => !RANK_COLS.has(col),
+    (col) => !RANK_COLS.has(col) && !hiddenColumns.has(col),
   );
   const numericMap = {};
 
@@ -408,14 +462,67 @@ function buildTable(data, options = {}) {
   return table;
 }
 
+function buildColumnToggleRow(columns) {
+  const available = COLUMN_TOGGLES.filter(([key]) => columns.includes(key));
+  if (available.length === 0) return null;
+
+  const row = document.createElement("div");
+  row.className = "column-toggle-row";
+
+  for (const [key, label] of available) {
+    const chip = document.createElement("label");
+    chip.className = "toggle-label";
+
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = !hiddenColumns.has(key);
+    const info = FIELD_INFO[key];
+    if (info) input.title = info;
+    input.addEventListener("change", () => {
+      if (input.checked) {
+        hiddenColumns.delete(key);
+      } else {
+        hiddenColumns.add(key);
+      }
+      saveHiddenColumns();
+      if (visibilityListeners.size > 0) {
+        for (const fn of visibilityListeners) fn();
+      } else {
+        renderTable();
+      }
+    });
+
+    const span = document.createElement("span");
+    span.textContent = label;
+
+    chip.appendChild(input);
+    chip.appendChild(span);
+    row.appendChild(chip);
+  }
+
+  return row;
+}
+
+let lastData = null;
+let lastOptions = {};
+
+function renderTable() {
+  renderPlayers(lastData, lastOptions);
+}
+
 function renderPlayers(data, options) {
   const container = document.getElementById("playersContainer");
   if (!container) return console.error("Missing #playersContainer");
+  lastData = data;
+  lastOptions = options;
   if (!data.length) {
     container.textContent = "No player data.";
     return;
   }
   container.textContent = "";
+  const columns = Object.keys(data[0] || {});
+  const toggleRow = buildColumnToggleRow(columns);
+  if (toggleRow) container.appendChild(toggleRow);
   container.appendChild(buildTable(data, options));
 }
 
@@ -435,5 +542,8 @@ export {
   getCompareIds,
   clearCompare,
   onCompareChange,
+  getVisibleRotoCategories,
+  getVisibleGoalieRotoCategories,
+  onColumnVisibilityChange,
   MAX_COMPARE,
 };
