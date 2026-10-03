@@ -39,11 +39,13 @@ function buildTableSection(players, title, tip = "") {
   const rows = goalie
     ? [
         ["GP"], ["W"], ["SV%"], ["GAA"], ["Age"], ["GVI"], ["AGVI"],
-        ["Z", "RotoVal"], ["Z82", "RotoVal-Pace"], ["Rank", "rankGAA"],
+        ["Trend"], ["Stab"], ["Z", "RotoVal"], ["Z82", "RotoVal-Pace"],
+        ["Rank", "rankGAA"],
       ]
     : [
         ["GP"], ["G"], ["A"], ["P"], ["PPP"], ["+/-"], ["TOI"], ["Age"],
-        ["GVI"], ["RVI"], ["AGVI"], ["Z", "RotoVal"], ["ZP", "RotoVal-Pos"],
+        ["GVI"], ["RVI"], ["AGVI"], ["Trend"], ["Stab"],
+        ["Z", "RotoVal"], ["ZP", "RotoVal-Pos"],
         ["ZPX", "RotoVal-PosExact"], ["Z82", "RotoVal-Pace"], ["Rank", "rankP"],
       ];
 

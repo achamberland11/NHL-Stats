@@ -1,4 +1,3 @@
-import { calculerPlayerValueIndex, calculerGoalerValueIndex } from "./stats.js";
 import { openPlayerCard } from "./playerCard.js";
 import { TEAM_SLUGS } from "./api.js";
 import { FIELD_INFO } from "./fields.js";
@@ -30,6 +29,8 @@ const VALUE_COLS = [
   "RVI",
   "GVI",
   "AGVI",
+  "Trend",
+  "Stab",
   "RotoVal",
   "RotoVal-Pos",
   "RotoVal-PosExact",
@@ -293,12 +294,6 @@ function buildTable(data, options = {}) {
   function rebuildTbody() {
     tbody.innerHTML = "";
     let index = 0;
-
-    data.forEach((player) => {
-      player.P != null
-        ? (player["RVI"] = calculerPlayerValueIndex(data, player))
-        : (player["RVI"] = calculerGoalerValueIndex(data, player));
-    });
 
     const rankMaps = {};
     const nbr = {};

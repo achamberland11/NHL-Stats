@@ -23,6 +23,7 @@ import {
   onColumnVisibilityChange,
 } from "./table.js";
 import { openCompareModal } from "./compare.js";
+import { getWeight, setWeight, resetWeights, onWeightsChange } from "./weights.js";
 
 const positionSelect = document.getElementById("positionFilter");
 const defaultPosition = "All";
@@ -121,6 +122,146 @@ function render() {
   renderPlayers(filtered, { showHidden: removedView });
 }
 
+const WEIGHT_GROUPS = [
+  { title: "Skaters", cats: ["G", "A", "P", "PPP", "+/-", "S", "BLK", "HITS"] },
+  { title: "Goalers", cats: ["W", "SV%", "GAA", "SA"] },
+];
+
+const WEIGHT_HINTS = {
+  G: "Goals.",
+  A: "Assists.",
+  P: "Points (goals + assists).",
+  PPP: "Power play points.",
+  "+/-": "Plus/minus.",
+  S: "Shots (counted in the Z-score only, not the value indexes).",
+  BLK: "Blocked shots (counted in the Z-score only, not the value indexes).",
+  HITS: "Hits (counted in the Z-score only, not the value indexes).",
+  W: "Wins.",
+  "SV%": "Save percentage.",
+  GAA: "Goals against average (lower is better).",
+  SA: "Shots against (Z-score only, higher is better).",
+  Age: "Age factor in the value indexes. 0 = off; raise to favor younger players.",
+};
+
+function buildWeightInput(cat) {
+  const label = document.createElement("label");
+  label.className = "weight-input";
+
+  const name = document.createElement("span");
+  name.textContent = cat;
+  const hint = WEIGHT_HINTS[cat];
+  name.title = hint
+    ? `${cat}: ${hint} Weight applied to the Z-scores and value indexes.`
+    : `Weight of ${cat} applied to the Z-scores and value indexes.`;
+  label.appendChild(name);
+
+  const input = document.createElement("input");
+  input.type = "number";
+  input.step = "0.1";
+  input.min = "0";
+  label.appendChild(input);
+
+  let timer = null;
+
+  function sync() {
+    input.value = getWeight(cat);
+  }
+
+  function commit() {
+    clearTimeout(timer);
+    const raw = input.value;
+    if (raw === "") return sync();
+    const v = Number(raw);
+    if (!Number.isFinite(v) || v < 0) return sync();
+    if (v !== getWeight(cat)) setWeight(cat, v);
+    else sync();
+  }
+
+  input.addEventListener("change", commit);
+  input.addEventListener("input", () => {
+    clearTimeout(timer);
+    const raw = input.value;
+    if (raw === "") return;
+    const v = Number(raw);
+    if (!Number.isFinite(v) || v < 0) return;
+    timer = setTimeout(() => {
+      if (v !== getWeight(cat)) setWeight(cat, v);
+    }, 250);
+  });
+  input.addEventListener("focus", () => input.select());
+
+  label.sync = sync;
+  return label;
+}
+
+function buildWeightsPanel() {
+  const wrap = document.createElement("div");
+  wrap.className = "weights-wrap";
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "button";
+  btn.textContent = "Weights";
+  btn.title = "Adjust how much each category counts in the Z-scores and value indexes. Reset restores the defaults.";
+
+  const panel = document.createElement("div");
+  panel.className = "weights-panel";
+  panel.hidden = true;
+
+  function toggle(open) {
+    panel.hidden = !open;
+    btn.classList.toggle("active", open);
+    if (open) {
+      for (const row of panel.querySelectorAll(".weight-input")) row.sync();
+    }
+  }
+
+  for (const group of WEIGHT_GROUPS) {
+    const section = document.createElement("div");
+    section.className = "weights-section";
+
+    const title = document.createElement("div");
+    title.className = "weights-section-title";
+    title.textContent = group.title;
+    section.appendChild(title);
+
+    for (const cat of group.cats) section.appendChild(buildWeightInput(cat));
+    panel.appendChild(section);
+  }
+
+  const bothSection = document.createElement("div");
+  bothSection.className = "weights-section";
+  const bothTitle = document.createElement("div");
+  bothTitle.className = "weights-section-title";
+  bothTitle.textContent = "Both";
+  bothSection.appendChild(bothTitle);
+  bothSection.appendChild(buildWeightInput("Age"));
+  panel.appendChild(bothSection);
+
+  const resetBtn = document.createElement("button");
+  resetBtn.type = "button";
+  resetBtn.className = "button";
+  resetBtn.textContent = "Reset to defaults";
+  resetBtn.title = "Restore the default weights.";
+  resetBtn.addEventListener("click", () => {
+    resetWeights();
+    for (const row of panel.querySelectorAll(".weight-input")) row.sync();
+  });
+  panel.appendChild(resetBtn);
+
+  btn.addEventListener("click", () => toggle(panel.hidden));
+  document.addEventListener("click", (e) => {
+    if (!wrap.contains(e.target) && !panel.hidden) toggle(false);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !panel.hidden) toggle(false);
+  });
+
+  wrap.appendChild(btn);
+  wrap.appendChild(panel);
+  return wrap;
+}
+
 (async () => {
   document.getElementById("refreshBtn").addEventListener("click", () => {
     localStorage.removeItem(CACHE_KEY + "_skaters_" + seasons[0]);
@@ -217,23 +358,37 @@ function render() {
     seasonDataGoaler[s] = goalies;
   }
 
-  const skatersAGVI = computeAverageGVI(seasonDataPlayer);
-  const goaliesAGVI = computeAverageGVI(seasonDataGoaler);
-
-  for (const s of seasons){
-    for (const player of seasonDataPlayer[s]){
-      player["AGVI"] = skatersAGVI.get(player.Joueurs) || 0;
+  function recomputeValueIndexes() {
+    for (const s of seasons) {
+      addPlayerValueFields(seasonDataPlayer[s]);
+      addGoalerValueFields(seasonDataGoaler[s]);
     }
-    for (const goalie of seasonDataGoaler[s]){
-      goalie["AGVI"] = goaliesAGVI.get(goalie.Gardiens) || 0;
+    const skaters = computeAverageGVI(seasonDataPlayer);
+    const goalies = computeAverageGVI(seasonDataGoaler);
+    for (const s of seasons) {
+      for (const player of seasonDataPlayer[s]) {
+        player.AGVI = skaters.avgMap.get(player.Joueurs) || 0;
+        player.Trend = skaters.trendMap.get(player.Joueurs) || 0;
+        player.Stab = skaters.stabMap.get(player.Joueurs) || 0;
+      }
+      for (const goalie of seasonDataGoaler[s]) {
+        goalie.AGVI = goalies.avgMap.get(goalie.Gardiens) || 0;
+        goalie.Trend = goalies.trendMap.get(goalie.Gardiens) || 0;
+        goalie.Stab = goalies.stabMap.get(goalie.Gardiens) || 0;
+      }
     }
-    computeRotoValues(seasonDataPlayer[s], getVisibleRotoCategories());
-    computeGoalieRotoValues(seasonDataGoaler[s], getVisibleGoalieRotoCategories());
   }
 
   function applyRotoVisibility() {
     computeRotoValues(seasonDataPlayer[season], getVisibleRotoCategories());
     computeGoalieRotoValues(seasonDataGoaler[season], getVisibleGoalieRotoCategories());
+  }
+
+  recomputeValueIndexes();
+
+  for (const s of seasons) {
+    computeRotoValues(seasonDataPlayer[s], getVisibleRotoCategories());
+    computeGoalieRotoValues(seasonDataGoaler[s], getVisibleGoalieRotoCategories());
   }
 
   allPlayers = seasonDataPlayer[season];
@@ -245,6 +400,14 @@ function render() {
     applyRotoVisibility();
     render();
   });
+
+  onWeightsChange(() => {
+    recomputeValueIndexes();
+    applyRotoVisibility();
+    render();
+  });
+
+  document.querySelector(".filters-bar").appendChild(buildWeightsPanel());
 
   seasonSelect.addEventListener("change", async () => {
     season = seasonSelect.value;

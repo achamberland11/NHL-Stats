@@ -1,220 +1,164 @@
-import { LEAGUE_CONFIG, VALUE_WEIGHTS } from "./config.js";
+import { LEAGUE_CONFIG } from "./config.js";
+import { getWeight } from "./weights.js";
 
-////// Calculer moyennes
-function calculerMoyenneGoals(data) {
-  if (!Array.isArray(data) || data.length === 0) return data;
-  var goals = 0;
+////// Pace projection
+const PACE_KEYS = {
+  G: "G82",
+  A: "A82",
+  P: "P82",
+  PPP: "PPP82",
+  "+/-": "PM82",
+  S: "S82",
+  BLK: "BLK82",
+  HITS: "HITS82",
+  W: "W82",
+  SA: "SA82",
+};
 
-  data.forEach((player) => {
-    const playerGoals = Number(player.G) || 0;
-    goals += playerGoals;
-  });
+const SKATER_PACE_KEYS = {
+  G: "G82",
+  A: "A82",
+  P: "P82",
+  PPP: "PPP82",
+  "+/-": "PM82",
+  S: "S82",
+  BLK: "BLK82",
+  HITS: "HITS82",
+};
 
-  return goals / data.length;
-}
+const GOALIE_PACE_KEYS = {
+  W: "W82",
+  SA: "SA82",
+};
 
-function calculerMoyenneAssists(data) {
-  if (!Array.isArray(data) || data.length === 0) return data;
-  var assists = 0;
-
-  data.forEach((player) => {
-    const playerAssists = Number(player.A) || 0;
-    assists += playerAssists;
-  });
-
-  return assists / data.length;
-}
-
-function calculerMoyennePoints(data) {
-  if (!Array.isArray(data) || data.length === 0) return data;
-  var points = 0;
-
-  data.forEach((player) => {
-    const playerPoints = Number(player.P) || 0;
-    points += playerPoints;
-  });
-
-  return points / data.length;
-}
-
-function calculerMoyennePPPoints(data) {
-  if (!Array.isArray(data) || data.length === 0) return data;
-  var ppPoints = 0;
-
-  data.forEach((player) => {
-    const playerPPPoints = Number(player.PPP) || 0;
-    ppPoints += playerPPPoints;
-  });
-
-  return ppPoints / data.length;
-}
-
-/// Goalies
-function calculerMoyenneWin(data) {
-  if (!Array.isArray(data) || data.length === 0) return data;
-  var wins = 0;
-
-  data.forEach((goaler) => {
-    const goalerWins = Number(goaler.W) || 0;
-    wins += goalerWins;
-  });
-
-  return wins / data.length;
-}
-
-function calculerMoyenneSAV(data) {
-  if (!Array.isArray(data) || data.length === 0) return data;
-  var sav = 0;
-
-  data.forEach((goaler) => {
-    const goealerSAV = Number(goaler["SV%"]);
-    sav += goealerSAV;
-  });
-
-  return sav / data.length;
-}
-
-function calculerMoyenneGAA(data) {
-  if (!Array.isArray(data) || data.length === 0) return data;
-  var gaa = 0;
-
-  data.forEach((goaler) => {
-    const goalerGAA = Number(goaler.GAA);
-    gaa += goalerGAA;
-  });
-
-  return gaa / data.length;
-}
-
-/// Player Value Index et Relative Value Index
-function calculerPlayerValueIndex(data, player) {
-  var moyenneGoals = calculerMoyenneGoals(data);
-  var moyenneAssists = calculerMoyenneAssists(data);
-  var moyennePoints = calculerMoyennePoints(data);
-  var moyennePPPoints = calculerMoyennePPPoints(data);
-
-  var {
-    goalsWeight,
-    assistWeight,
-    pointsWeight,
-    plusMinusWeight,
-    ppPointsWeight,
-    statsWeight,
-    ageWeight,
-    skaterAgePeak,
-  } = VALUE_WEIGHTS;
-
-  const goals = Number(player.G) || 0;
-  const assists = Number(player.A) || 0;
-  const points = Number(player.P) || 0;
-  const plusMinus = Number(player["+/-"]) || 0;
-  const ppPoints = Number(player.PPP) || 0;
-  const age = Number(player.Age) || 0;
-  const GP = Number(player.GP) || 1;
-
-  var goalsValue = goalsWeight * (goals / moyenneGoals) + goals;
-  var assistsValue = assistWeight * (assists / moyenneAssists) + assists;
-  var pointsValue = pointsWeight * (points / moyennePoints) + points;
-  var plusMinusValue = plusMinusWeight * plusMinus;
-  var ppPointsValue = ppPointsWeight * (ppPoints / moyennePPPoints) + ppPoints;
-
-  var stats =
-    goalsValue + assistsValue + pointsValue + plusMinusValue + ppPointsValue;
-  var statsValue = (stats + stats / GP) * statsWeight;
-  var ageValue = ageWeight * (1 - (age - skaterAgePeak) / skaterAgePeak);
-
-  var playerValue = statsValue + ageValue;
-  playerValue /= 100;
-
-  return Math.round(playerValue * 100) / 100;
-}
-
-function calculerGoalerValueIndex(data, goaler) {
-  var moyenneWin = calculerMoyenneWin(data);
-  var moyenneSAV = calculerMoyenneSAV(data);
-  var moyenneGAA = calculerMoyenneGAA(data);
-
-  var {
-    winWeight,
-    saveWeight,
-    gaaWeight,
-    gpWeight,
-    goalieAgeWeight,
-    goalieAgePeak,
-  } = VALUE_WEIGHTS;
-
-  const win = Number(goaler.W) || 0;
-  const sav = Number(goaler["SV%"]) || 0;
-  const gaa = Number(goaler.GAA) || 0;
-  const age = Number(goaler.Age) || 0;
-  const GP = Number(goaler.GP) || 1;
-
-  var winValue = winWeight * win + win / GP + win / moyenneWin;
-  var SAVValue = saveWeight * sav + sav / moyenneSAV;
-  var GAAValue = gaaWeight * gaa + gaa / moyenneGAA;
-  var GPValue = gpWeight * GP;
-
-  var statsValue = winValue + SAVValue - GAAValue + GPValue;
-  var ageValue = goalieAgeWeight * (1 - (age - goalieAgePeak) / goalieAgePeak);
-
-  var goalerValue = statsValue + ageValue;
-
-  return Math.round(goalerValue * 100) / 100;
-}
-
-function calculerMoyenneRVI(data) {
-  if (!Array.isArray(data) || data.length === 0) return data;
-  var PlayersValue = 0;
-
-  data.forEach((player) => {
-    const playerValue = Number(player["RVI"]);
-    PlayersValue += playerValue;
-  });
-
-  return PlayersValue / data.length;
-}
-
-function computeAverageGVI(seasonData) {
-  const gviSums = new Map();
-  const gviCounts = new Map();
-
-  for (const players of Object.values(seasonData)) {
-    for (const player of players){
-      const name = player.Joueurs || player.Gardiens;
-      const gvi = Number(player.GVI) || 0;
-      gviSums.set(name, (gviSums.get(name) || 0) + gvi);
-      gviCounts.set(name, (gviCounts.get(name) || 0) + 1);
+function computePaceValues(items) {
+  for (const p of items) {
+    const keys = p.Gardiens != null ? GOALIE_PACE_KEYS : SKATER_PACE_KEYS;
+    const gp = Math.max(Number(p.GP) || 0, 1);
+    for (const [cat, key] of Object.entries(keys)) {
+      const v = Number(p[cat]) || 0;
+      p[key] = Math.round((v / gp) * LEAGUE_CONFIG.paceGames);
     }
   }
-
-  const avgMap = new Map();
-  for (const [name, sum] of gviSums) {
-    avgMap.set(name, Math.round((sum / gviCounts.get(name)) * 100) / 100);
-  }
-
-  return avgMap;
 }
 
-////// Ajouter les fields qui ne sont pas encore intégré
-// Player Value Index
+function paceKeyFor(cat) {
+  return PACE_KEYS[cat] || cat;
+}
+
+////// Value indexes (weighted pace z-scores)
+function ageZScore(pool) {
+  const vals = pool.map((p) => Number(p.Age)).filter(Number.isFinite);
+  const m = mean(vals);
+  const sd = stdev(vals);
+  const map = new Map();
+  for (const p of pool) {
+    const v = Number(p.Age);
+    map.set(p, !Number.isFinite(v) || sd === 0 ? 0 : (v - m) / sd);
+  }
+  return map;
+}
+
+function linearSlope(vals) {
+  const n = vals.length;
+  if (n < 2) return 0;
+  const meanX = (n - 1) / 2;
+  const meanY = mean(vals);
+  let num = 0;
+  let den = 0;
+  for (let i = 0; i < n; i++) {
+    num += (i - meanX) * (vals[i] - meanY);
+    den += (i - meanX) * (i - meanX);
+  }
+  return den === 0 ? 0 : num / den;
+}
+
+function weightedComposite(p, cats, zMaps, ageMap) {
+  let total = 0;
+  for (let i = 0; i < cats.length; i++) {
+    total += getWeight(cats[i]) * zMaps[i].get(p);
+  }
+  total += getWeight("Age") * -ageMap.get(p);
+  return Math.round(total * 100) / 100;
+}
+
+function assignValueIndex(pool, cats, inverted, targetKey) {
+  const paceCats = cats.map((c) => paceKeyFor(c));
+  const zMaps = categoryZ(paceCats, inverted, pool);
+  const ageMap = ageZScore(pool);
+  for (const p of pool) p[targetKey] = weightedComposite(p, cats, zMaps, ageMap);
+}
+
+function groupValueIndex(data, groupFn, cats, inverted, targetKey, minGP) {
+  const groups = new Map();
+  for (const p of eligible(data, minGP)) {
+    const g = groupFn(p);
+    if (g == null) continue;
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g).push(p);
+  }
+  for (const group of groups.values()) {
+    assignValueIndex(group, cats, inverted, targetKey);
+  }
+}
+
 function addPlayerValueFields(data) {
   if (!Array.isArray(data) || data.length === 0) return data;
-  data.forEach((player) => {
-    var RVI = calculerPlayerValueIndex(data, player);
-    var GVI = calculerPlayerValueIndex(data, player);
-    player["RVI"] = RVI;
-    player["GVI"] = GVI;
-  });
+  const cfg = LEAGUE_CONFIG;
+  const pool = eligible(data, cfg.minGP);
+  computePaceValues(data);
+
+  const cats = cfg.skaterCategories;
+  const inverted = cats.map(() => false);
+  assignValueIndex(pool, cats, inverted, "GVI");
+  groupValueIndex(
+    data,
+    (p) => (isForward(p) ? "F" : "D"),
+    cats,
+    inverted,
+    "RVI",
+    cfg.minGP,
+  );
   return data;
 }
 
 function addGoalerValueFields(data) {
   if (!Array.isArray(data) || data.length === 0) return data;
-  data.forEach((goaler) => {
-    var GVI = calculerGoalerValueIndex(data, goaler);
-    goaler["GVI"] = GVI;
-  });
+  const cfg = LEAGUE_CONFIG;
+  const pool = eligible(data, cfg.goalieMinGP);
+  computePaceValues(data);
+
+  const cats = cfg.goalieCategories;
+  const inverted = cats.map((c) => c === "GAA");
+  assignValueIndex(pool, cats, inverted, "GVI");
+  assignValueIndex(pool, cats, inverted, "RVI");
   return data;
+}
+
+function computeAverageGVI(seasonData) {
+  const series = new Map();
+  for (const season of Object.keys(seasonData)) {
+    for (const player of seasonData[season]) {
+      const name = player.Joueurs || player.Gardiens;
+      if (!series.has(name)) series.set(name, []);
+      series.get(name).push({ season, gvi: Number(player.GVI) || 0 });
+    }
+  }
+
+  const avgMap = new Map();
+  const trendMap = new Map();
+  const stabMap = new Map();
+  for (const [name, list] of series) {
+    list.sort((a, b) => (a.season < b.season ? -1 : 1));
+    const vals = list.map((s) => s.gvi);
+    const m = mean(vals);
+    avgMap.set(name, Math.round(m * 100) / 100);
+    trendMap.set(name, Math.round(linearSlope(vals) * 100) / 100);
+    const sd = stdev(vals);
+    const cv = m === 0 ? 0 : sd / Math.abs(m);
+    stabMap.set(name, Math.round((1 / (1 + cv)) * 100) / 100);
+  }
+  return { avgMap, trendMap, stabMap };
 }
 
 const SKATER_RANK_CONFIG = [
@@ -253,14 +197,6 @@ function addCategoryRanks(data, config) {
 }
 
 ////// Roto value (Z-score)
-const PACE_COLS = [
-  { stat: "G", paceKey: "G82" },
-  { stat: "A", paceKey: "A82" },
-  { stat: "P", paceKey: "P82" },
-  { stat: "PPP", paceKey: "PPP82" },
-  { stat: "+/-", paceKey: "PM82" },
-];
-
 function mean(arr) {
   if (!arr.length) return 0;
   return arr.reduce((sum, v) => sum + v, 0) / arr.length;
@@ -301,19 +237,19 @@ function categoryZ(cats, inverted, pool) {
   });
 }
 
-function assignRoto(pool, cats, inverted, targetKey) {
-  const weights = LEAGUE_CONFIG.categoryWeights;
+function assignRoto(pool, cats, inverted, targetKey, weightList) {
   const zMaps = categoryZ(cats, inverted, pool);
   for (const p of pool) {
     let total = 0;
     for (let i = 0; i < cats.length; i++) {
-      total += (weights[cats[i]] ?? 1) * zMaps[i].get(p);
+      total +=
+        (weightList ? weightList[i] : getWeight(cats[i])) * zMaps[i].get(p);
     }
     p[targetKey] = Math.round(total * 100) / 100;
   }
 }
 
-function groupRoto(data, groupFn, cats, inverted, targetKey, minGP) {
+function groupRoto(data, groupFn, cats, inverted, targetKey, minGP, weightList) {
   const groups = new Map();
   for (const p of eligible(data, minGP)) {
     const g = groupFn(p);
@@ -322,7 +258,7 @@ function groupRoto(data, groupFn, cats, inverted, targetKey, minGP) {
     groups.get(g).push(p);
   }
   for (const group of groups.values()) {
-    assignRoto(group, cats, inverted, targetKey);
+    assignRoto(group, cats, inverted, targetKey, weightList);
   }
 }
 
@@ -431,15 +367,10 @@ function computeRotoValues(players, cats = LEAGUE_CONFIG.rotoCategories) {
   const cfg = LEAGUE_CONFIG;
   const inverted = cats.map(() => false);
   const pool = eligible(players, cfg.minGP);
+  computePaceValues(players);
 
-  for (const p of players) {
-    const gp = Math.max(Number(p.GP) || 0, 1);
-    for (const { stat, paceKey } of PACE_COLS) {
-      p[paceKey] = Math.round(((Number(p[stat]) || 0) / gp) * cfg.paceGames);
-    }
-  }
-
-  assignRoto(pool, cats, inverted, "RotoVal");
+  const weightList = cats.map((c) => getWeight(c));
+  assignRoto(pool, cats, inverted, "RotoVal", weightList);
   groupRoto(
     players,
     (p) => (p.Position && p.Position.includes("D") ? "D" : "F"),
@@ -447,6 +378,7 @@ function computeRotoValues(players, cats = LEAGUE_CONFIG.rotoCategories) {
     inverted,
     "RotoVal-Pos",
     cfg.minGP,
+    weightList,
   );
   groupRoto(
     players,
@@ -460,48 +392,48 @@ function computeRotoValues(players, cats = LEAGUE_CONFIG.rotoCategories) {
     inverted,
     "RotoVal-PosExact",
     cfg.minGP,
+    weightList,
   );
 
   const included = new Set(cats);
-  const paceCats = PACE_COLS.filter((c) => included.has(c.stat)).map(
-    (c) => c.paceKey,
+  const paceCats = [];
+  const paceWeights = [];
+  for (const [stat, key] of Object.entries(PACE_KEYS)) {
+    if (!included.has(stat)) continue;
+    paceCats.push(key);
+    paceWeights.push(getWeight(stat));
+  }
+  assignRoto(
+    pool,
+    paceCats,
+    paceCats.map(() => false),
+    "RotoVal-Pace",
+    paceWeights,
   );
-  assignRoto(pool, paceCats, paceCats.map(() => false), "RotoVal-Pace");
 }
 
 function computeGoalieRotoValues(goalies, cats = LEAGUE_CONFIG.goalieRotoCategories) {
   const cfg = LEAGUE_CONFIG;
   const inverted = cats.map((c) => c === "GAA");
   const pool = eligible(goalies, cfg.goalieMinGP);
+  computePaceValues(goalies);
 
-  for (const g of goalies) {
-    const gp = Math.max(Number(g.GP) || 0, 1);
-    g.W82 = Math.round(((Number(g.W) || 0) / gp) * cfg.paceGames);
-    g.SA82 = Math.round(((Number(g.SA) || 0) / gp) * cfg.paceGames);
-  }
+  const weightList = cats.map((c) => getWeight(c));
+  assignRoto(pool, cats, inverted, "RotoVal", weightList);
 
-  assignRoto(pool, cats, inverted, "RotoVal");
-
-  const included = new Set(cats);
-  const paceCats = [];
-  const paceInverted = [];
-  if (included.has("W")) {
-    paceCats.push("W82");
-    paceInverted.push(false);
+  const collected = [];
+  for (const c of cats) {
+    if (c === "W") collected.push(["W82", false]);
+    else if (c === "SA") collected.push(["SA82", false]);
+    else if (c === "SV%") collected.push(["SV%", false]);
+    else if (c === "GAA") collected.push(["GAA", true]);
   }
-  if (included.has("SV%")) {
-    paceCats.push("SV%");
-    paceInverted.push(false);
-  }
-  if (included.has("GAA")) {
-    paceCats.push("GAA");
-    paceInverted.push(true);
-  }
-  if (included.has("SA")) {
-    paceCats.push("SA82");
-    paceInverted.push(false);
-  }
-  assignRoto(pool, paceCats, paceInverted, "RotoVal-Pace");
+  const paceCats = collected.map(([k]) => k);
+  const paceInverted = collected.map(([, inv]) => inv);
+  const paceWeights = collected.map(([k]) =>
+    getWeight(k === "W82" ? "W" : k === "SA82" ? "SA" : k),
+  );
+  assignRoto(pool, paceCats, paceInverted, "RotoVal-Pace", paceWeights);
 }
 
 export {
@@ -510,9 +442,6 @@ export {
   addCategoryRanks,
   SKATER_RANK_CONFIG,
   GOALIE_RANK_CONFIG,
-  calculerPlayerValueIndex,
-  calculerGoalerValueIndex,
-  calculerMoyenneRVI,
   computeAverageGVI,
   computeRotoValues,
   computeGoalieRotoValues,
