@@ -8,34 +8,21 @@ const PACE_KEYS = {
   P: "P82",
   PPP: "PPP82",
   "+/-": "PM82",
-  S: "S82",
+  S: "SOG82",
   BLK: "BLK82",
   HITS: "HITS82",
   W: "W82",
   SA: "SA82",
 };
 
-const SKATER_PACE_KEYS = {
-  G: "G82",
-  A: "A82",
-  P: "P82",
-  PPP: "PPP82",
-  "+/-": "PM82",
-  S: "S82",
-  BLK: "BLK82",
-  HITS: "HITS82",
-};
-
-const GOALIE_PACE_KEYS = {
-  W: "W82",
-  SA: "SA82",
-};
-
-function computePaceValues(items) {
+function computePaceValues(items, cats) {
+  const paceKeys = Object.values(PACE_KEYS);
   for (const p of items) {
-    const keys = p.Gardiens != null ? GOALIE_PACE_KEYS : SKATER_PACE_KEYS;
+    for (const key of paceKeys) delete p[key];
     const gp = Math.max(Number(p.GP) || 0, 1);
-    for (const [cat, key] of Object.entries(keys)) {
+    for (const cat of cats) {
+      const key = PACE_KEYS[cat];
+      if (!key) continue;
       const v = Number(p[cat]) || 0;
       p[key] = Math.round((v / gp) * LEAGUE_CONFIG.paceGames);
     }
@@ -102,13 +89,12 @@ function groupValueIndex(data, groupFn, cats, inverted, targetKey, minGP) {
   }
 }
 
-function addPlayerValueFields(data) {
+function addPlayerValueFields(data, cats = LEAGUE_CONFIG.skaterCategories) {
   if (!Array.isArray(data) || data.length === 0) return data;
   const cfg = LEAGUE_CONFIG;
   const pool = eligible(data, cfg.minGP);
-  computePaceValues(data);
+  computePaceValues(data, cats);
 
-  const cats = cfg.skaterCategories;
   const inverted = cats.map(() => false);
   assignValueIndex(pool, cats, inverted, "GVI");
   groupValueIndex(
@@ -122,13 +108,15 @@ function addPlayerValueFields(data) {
   return data;
 }
 
-function addGoalerValueFields(data) {
+function addGoalerValueFields(
+  data,
+  cats = LEAGUE_CONFIG.goalieCategories,
+) {
   if (!Array.isArray(data) || data.length === 0) return data;
   const cfg = LEAGUE_CONFIG;
   const pool = eligible(data, cfg.goalieMinGP);
-  computePaceValues(data);
+  computePaceValues(data, cats);
 
-  const cats = cfg.goalieCategories;
   const inverted = cats.map((c) => c === "GAA");
   assignValueIndex(pool, cats, inverted, "GVI");
   assignValueIndex(pool, cats, inverted, "RVI");
@@ -367,7 +355,7 @@ function computeRotoValues(players, cats = LEAGUE_CONFIG.rotoCategories) {
   const cfg = LEAGUE_CONFIG;
   const inverted = cats.map(() => false);
   const pool = eligible(players, cfg.minGP);
-  computePaceValues(players);
+  computePaceValues(players, cats);
 
   const weightList = cats.map((c) => getWeight(c));
   assignRoto(pool, cats, inverted, "RotoVal", weightList);
@@ -416,7 +404,7 @@ function computeGoalieRotoValues(goalies, cats = LEAGUE_CONFIG.goalieRotoCategor
   const cfg = LEAGUE_CONFIG;
   const inverted = cats.map((c) => c === "GAA");
   const pool = eligible(goalies, cfg.goalieMinGP);
-  computePaceValues(goalies);
+  computePaceValues(goalies, cats);
 
   const weightList = cats.map((c) => getWeight(c));
   assignRoto(pool, cats, inverted, "RotoVal", weightList);

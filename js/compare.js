@@ -118,12 +118,10 @@ function buildTableSection(players, title, tip = "") {
   return section;
 }
 
-function buildChartContainer(players, leaguePool, mode) {
+function buildChartContainer(players, leaguePool, mode, skaterCats, goalieCats) {
   const goalie = isGoalieRow(players[0]);
-  const cats = goalie
-    ? LEAGUE_CONFIG.goalieCategories
-    : LEAGUE_CONFIG.skaterCategories;
-  const inverted = goalie ? [false, false, true] : cats.map(() => false);
+  const cats = goalie ? goalieCats : skaterCats;
+  const inverted = cats.map((c) => c === "GAA");
   const minGP = goalie ? LEAGUE_CONFIG.goalieMinGP : LEAGUE_CONFIG.minGP;
   const zScores = computeRadarZScores(
     players,
@@ -257,7 +255,14 @@ function buildPlayerList(players, onOpenCard, onRemove) {
   return list;
 }
 
-function buildRadarSection(players, onOpenCard, onRemove, leaguePool) {
+function buildRadarSection(
+  players,
+  onOpenCard,
+  onRemove,
+  leaguePool,
+  skaterCats,
+  goalieCats,
+) {
   const section = document.createElement("div");
   section.className = "compare-section";
 
@@ -297,7 +302,15 @@ function buildRadarSection(players, onOpenCard, onRemove, leaguePool) {
 
   const row = document.createElement("div");
   row.className = "compare-radar-row";
-  row.appendChild(buildChartContainer(players, leaguePool, modeSelect.value));
+  row.appendChild(
+    buildChartContainer(
+      players,
+      leaguePool,
+      modeSelect.value,
+      skaterCats,
+      goalieCats,
+    ),
+  );
   row.appendChild(buildPlayerList(players, onOpenCard, onRemove));
   section.appendChild(row);
 
@@ -306,7 +319,13 @@ function buildRadarSection(players, onOpenCard, onRemove, leaguePool) {
     if (oldContainer) {
       if (oldContainer.chart) oldContainer.chart.destroy();
       oldContainer.replaceWith(
-        buildChartContainer(players, leaguePool, modeSelect.value),
+        buildChartContainer(
+          players,
+          leaguePool,
+          modeSelect.value,
+          skaterCats,
+          goalieCats,
+        ),
       );
     }
   });
@@ -314,7 +333,14 @@ function buildRadarSection(players, onOpenCard, onRemove, leaguePool) {
   return section;
 }
 
-export function openCompareModal(players, season, onRemovePlayer, leaguePool = players) {
+export function openCompareModal(
+  players,
+  season,
+  onRemovePlayer,
+  leaguePool = players,
+  skaterCats = LEAGUE_CONFIG.skaterCategories,
+  goalieCats = LEAGUE_CONFIG.goalieCategories,
+) {
   const overlay = document.createElement("div");
   overlay.className = "player-card-overlay";
 
@@ -400,7 +426,16 @@ export function openCompareModal(players, season, onRemovePlayer, leaguePool = p
         SECTION_INFO.stats,
       ),
     );
-    body.appendChild(buildRadarSection(ordered, openPlayerPanel, removePlayer, leaguePool));
+    body.appendChild(
+      buildRadarSection(
+        ordered,
+        openPlayerPanel,
+        removePlayer,
+        leaguePool,
+        skaterCats,
+        goalieCats,
+      ),
+    );
 
     overlay.appendChild(card);
   }

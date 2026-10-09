@@ -133,13 +133,13 @@ const WEIGHT_HINTS = {
   P: "Points (goals + assists).",
   PPP: "Power play points.",
   "+/-": "Plus/minus.",
-  S: "Shots (counted in the Z-score only, not the value indexes).",
-  BLK: "Blocked shots (counted in the Z-score only, not the value indexes).",
-  HITS: "Hits (counted in the Z-score only, not the value indexes).",
+  S: "Shots (counted in the Z-scores and value indexes when the column is displayed).",
+  BLK: "Blocked shots (counted in the Z-scores and value indexes when the column is displayed).",
+  HITS: "Hits (counted in the Z-scores and value indexes when the column is displayed).",
   W: "Wins.",
   "SV%": "Save percentage.",
   GAA: "Goals against average (lower is better).",
-  SA: "Shots against (Z-score only, higher is better).",
+  SA: "Shots against (higher is better, counted when the column is displayed).",
   Age: "Age factor in the value indexes. 0 = off; raise to favor younger players.",
 };
 
@@ -318,7 +318,14 @@ function buildWeightsPanel() {
       const leaguePool = skaters.length
         ? seasonDataPlayer[season]
         : seasonDataGoaler[season];
-      openCompareModal(sameType, season, (id) => toggleCompare(id), leaguePool);
+      openCompareModal(
+        sameType,
+        season,
+        (id) => toggleCompare(id),
+        leaguePool,
+        getVisibleRotoCategories(),
+        getVisibleGoalieRotoCategories(),
+      );
     }
   });
 
@@ -349,8 +356,8 @@ function buildWeightsPanel() {
       goalie.Age = computeAge(birthDates.get(goalie.ID), s);
     }
 
-    addPlayerValueFields(players);
-    addGoalerValueFields(goalies);
+    addPlayerValueFields(players, getVisibleRotoCategories());
+    addGoalerValueFields(goalies, getVisibleGoalieRotoCategories());
     addCategoryRanks(players, SKATER_RANK_CONFIG);
     addCategoryRanks(goalies, GOALIE_RANK_CONFIG);
 
@@ -359,9 +366,11 @@ function buildWeightsPanel() {
   }
 
   function recomputeValueIndexes() {
+    const skaterCats = getVisibleRotoCategories();
+    const goalieCats = getVisibleGoalieRotoCategories();
     for (const s of seasons) {
-      addPlayerValueFields(seasonDataPlayer[s]);
-      addGoalerValueFields(seasonDataGoaler[s]);
+      addPlayerValueFields(seasonDataPlayer[s], skaterCats);
+      addGoalerValueFields(seasonDataGoaler[s], goalieCats);
     }
     const skaters = computeAverageGVI(seasonDataPlayer);
     const goalies = computeAverageGVI(seasonDataGoaler);
@@ -397,6 +406,7 @@ function buildWeightsPanel() {
   render();
 
   onColumnVisibilityChange(() => {
+    recomputeValueIndexes();
     applyRotoVisibility();
     render();
   });

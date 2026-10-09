@@ -46,7 +46,7 @@ const HEADER_LABELS = {
   rankW: "W Rank",
   rankSV: "SV% Rank",
   rankGAA: "GAA Rank",
-  S: "S",
+  S: "SOG",
   BLK: "BLK",
   HITS: "HITS",
   SA: "SA",
@@ -60,14 +60,27 @@ const HEADER_LABELS = {
 const HIDDEN_COLUMNS_STORAGE_KEY = "nhl_stats_hidden_cols";
 const DEFAULT_HIDDEN_COLUMNS = ["S", "BLK", "HITS", "SA"];
 
+const PACE82_COLUMNS = [
+  "G82",
+  "A82",
+  "P82",
+  "PPP82",
+  "PM82",
+  "SOG82",
+  "BLK82",
+  "HITS82",
+  "W82",
+  "SA82",
+];
+
 const COLUMN_TOGGLES = [
   ["PPP", "PPP"],
   ["+/-", "+/-"],
   ["TOI", "TOI"],
-  ["S", "Shots (S)"],
-  ["BLK", "Blocks (BLK)"],
-  ["HITS", "Hits (HITS)"],
-  ["SA", "Shots against (SA)"],
+  ["S", "Shots"],
+  ["BLK", "Blocks"],
+  ["HITS", "Hits"],
+  ["SA", "Shots against"],
 ];
 
 function loadHiddenColumns() {
@@ -458,8 +471,18 @@ function buildTable(data, options = {}) {
 }
 
 function buildColumnToggleRow(columns) {
+  const commit = () => {
+    saveHiddenColumns();
+    if (visibilityListeners.size > 0) {
+      for (const fn of visibilityListeners) fn();
+    } else {
+      renderTable();
+    }
+  };
+
   const available = COLUMN_TOGGLES.filter(([key]) => columns.includes(key));
-  if (available.length === 0) return null;
+  const paceAvailable = PACE82_COLUMNS.some((key) => columns.includes(key));
+  if (available.length === 0 && !paceAvailable) return null;
 
   const row = document.createElement("div");
   row.className = "column-toggle-row";
@@ -479,16 +502,38 @@ function buildColumnToggleRow(columns) {
       } else {
         hiddenColumns.add(key);
       }
-      saveHiddenColumns();
-      if (visibilityListeners.size > 0) {
-        for (const fn of visibilityListeners) fn();
-      } else {
-        renderTable();
-      }
+      commit();
     });
 
     const span = document.createElement("span");
     span.textContent = label;
+
+    chip.appendChild(input);
+    chip.appendChild(span);
+    row.appendChild(chip);
+  }
+
+  if (paceAvailable) {
+    const chip = document.createElement("label");
+    chip.className = "toggle-label";
+
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = PACE82_COLUMNS.every((key) => !hiddenColumns.has(key));
+    input.title = "Show or hide the per-82 pace projection columns.";
+    input.addEventListener("change", () => {
+      for (const key of PACE82_COLUMNS) {
+        if (input.checked) {
+          hiddenColumns.delete(key);
+        } else {
+          hiddenColumns.add(key);
+        }
+      }
+      commit();
+    });
+
+    const span = document.createElement("span");
+    span.textContent = "Pace (82)";
 
     chip.appendChild(input);
     chip.appendChild(span);
