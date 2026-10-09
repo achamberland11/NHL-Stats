@@ -1,4 +1,4 @@
-import { CACHE_KEY, loadPlayers, loadGoalies, loadRosterBirthDates, loadSkaterRealtime } from "./api.js";
+import { CACHE_KEY, loadPlayers, loadGoalies, loadRosterBirthDates, loadSkaterRealtime, removeCacheKeys } from "./api.js";
 import {
   addGoalerValueFields,
   addPlayerValueFields,
@@ -263,10 +263,12 @@ function buildWeightsPanel() {
 }
 
 (async () => {
-  document.getElementById("refreshBtn").addEventListener("click", () => {
-    localStorage.removeItem(CACHE_KEY + "_skaters_" + seasons[0]);
-    localStorage.removeItem(CACHE_KEY + "_goalies_" + seasons[0]);
-    localStorage.removeItem(CACHE_KEY + "_skater_realtime_" + seasons[0]);
+  document.getElementById("refreshBtn").addEventListener("click", async () => {
+    await removeCacheKeys([
+      CACHE_KEY + "_skaters_" + seasons[0],
+      CACHE_KEY + "_goalies_" + seasons[0],
+      CACHE_KEY + "_skater_realtime_" + seasons[0],
+    ]);
     location.reload();
   });
 

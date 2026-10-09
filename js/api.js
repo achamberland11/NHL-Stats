@@ -1,3 +1,5 @@
+import { storageGet, storageSet, removeCacheKeys } from "./storage.js";
+
 const CACHE_KEY = "nhl_stats_cache";
 const CACHE_TTL = 60 * 60 * 1000 * 24;
 const ROSTER_TTL = CACHE_TTL * 7;
@@ -73,11 +75,15 @@ const TEAM_SLUGS = {
 };
 
 async function fetchWithCache(url, cacheKey, ttl = CACHE_TTL) {
-  const cached = localStorage.getItem(cacheKey);
-  if (cached) {
-    const { data, timestamp } = JSON.parse(cached);
-    if (Date.now() - timestamp < ttl) {
-      return data;
+  let cached = null;
+  try {
+    cached = await storageGet(cacheKey);
+  } catch (err) {
+    console.error("Cache read failed:", cacheKey, err);
+  }
+  if (cached && typeof cached === "object" && cached.data != null) {
+    if (Date.now() - cached.timestamp < (cached.ttl || ttl)) {
+      return cached.data;
     }
   }
 
@@ -86,13 +92,15 @@ async function fetchWithCache(url, cacheKey, ttl = CACHE_TTL) {
   const json = await response.json();
   const result = "data" in json ? json.data : json;
 
-  localStorage.setItem(
-    cacheKey,
-    JSON.stringify({
+  try {
+    await storageSet(cacheKey, {
       data: result,
       timestamp: Date.now(),
-    }),
-  );
+      ttl,
+    });
+  } catch (err) {
+    console.error("Cache write failed:", cacheKey, err);
+  }
 
   return result;
 }
@@ -224,5 +232,6 @@ export {
   loadPlayerLanding,
   loadRosterBirthDates,
   loadSkaterRealtime,
+  removeCacheKeys,
   TEAM_SLUGS,
 };
