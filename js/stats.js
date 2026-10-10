@@ -1,4 +1,4 @@
-import { LEAGUE_CONFIG } from "./config.js";
+import { LEAGUE_CONFIG, VALUE_WEIGHTS } from "./config.js";
 import { getWeight } from "./weights.js";
 
 ////// Pace projection
@@ -34,14 +34,29 @@ function paceKeyFor(cat) {
 }
 
 ////// Value indexes (weighted pace z-scores)
-function ageZScore(pool) {
-  const vals = pool.map((p) => Number(p.Age)).filter(Number.isFinite);
+// Age curve: Gaussian peaking at prime age (24 skaters / 25 goalies),
+// declining for both older players and pre-prime prospects.
+// Standardized across the pool like every other z-term, so the Age
+// weight blends in on the same scale. Higher is better.
+const AGE_CURVE_SIGMA = 4;
+
+function ageCurveValue(age, peak) {
+  const d = age - peak;
+  return Math.exp(-(d * d) / (2 * AGE_CURVE_SIGMA * AGE_CURVE_SIGMA));
+}
+
+function ageCurveScore(pool, peak) {
+  const entries = [];
+  for (const p of pool) {
+    const v = Number(p.Age);
+    entries.push([p, Number.isFinite(v) ? ageCurveValue(v, peak) : null]);
+  }
+  const vals = entries.map(([, v]) => v).filter((v) => v != null);
   const m = mean(vals);
   const sd = stdev(vals);
   const map = new Map();
-  for (const p of pool) {
-    const v = Number(p.Age);
-    map.set(p, !Number.isFinite(v) || sd === 0 ? 0 : (v - m) / sd);
+  for (const [p, v] of entries) {
+    map.set(p, v == null || sd === 0 ? 0 : (v - m) / sd);
   }
   return map;
 }
@@ -65,18 +80,18 @@ function weightedComposite(p, cats, zMaps, ageMap) {
   for (let i = 0; i < cats.length; i++) {
     total += getWeight(cats[i]) * zMaps[i].get(p);
   }
-  total += getWeight("Age") * -ageMap.get(p);
+  total += getWeight("Age") * ageMap.get(p);
   return Math.round(total * 100) / 100;
 }
 
-function assignValueIndex(pool, cats, inverted, targetKey) {
+function assignValueIndex(pool, cats, inverted, targetKey, peak) {
   const paceCats = cats.map((c) => paceKeyFor(c));
   const zMaps = categoryZ(paceCats, inverted, pool);
-  const ageMap = ageZScore(pool);
+  const ageMap = ageCurveScore(pool, peak);
   for (const p of pool) p[targetKey] = weightedComposite(p, cats, zMaps, ageMap);
 }
 
-function groupValueIndex(data, groupFn, cats, inverted, targetKey, minGP) {
+function groupValueIndex(data, groupFn, cats, inverted, targetKey, minGP, peak) {
   const groups = new Map();
   for (const p of eligible(data, minGP)) {
     const g = groupFn(p);
@@ -85,7 +100,7 @@ function groupValueIndex(data, groupFn, cats, inverted, targetKey, minGP) {
     groups.get(g).push(p);
   }
   for (const group of groups.values()) {
-    assignValueIndex(group, cats, inverted, targetKey);
+    assignValueIndex(group, cats, inverted, targetKey, peak);
   }
 }
 
@@ -96,7 +111,7 @@ function addPlayerValueFields(data, cats = LEAGUE_CONFIG.skaterCategories) {
   computePaceValues(data, cats);
 
   const inverted = cats.map(() => false);
-  assignValueIndex(pool, cats, inverted, "GVI");
+  assignValueIndex(pool, cats, inverted, "GVI", VALUE_WEIGHTS.skaterAgePeak);
   groupValueIndex(
     data,
     (p) => (isForward(p) ? "F" : "D"),
@@ -104,6 +119,7 @@ function addPlayerValueFields(data, cats = LEAGUE_CONFIG.skaterCategories) {
     inverted,
     "RVI",
     cfg.minGP,
+    VALUE_WEIGHTS.skaterAgePeak,
   );
   return data;
 }
@@ -118,8 +134,8 @@ function addGoalerValueFields(
   computePaceValues(data, cats);
 
   const inverted = cats.map((c) => c === "GAA");
-  assignValueIndex(pool, cats, inverted, "GVI");
-  assignValueIndex(pool, cats, inverted, "RVI");
+  assignValueIndex(pool, cats, inverted, "GVI", VALUE_WEIGHTS.goalieAgePeak);
+  assignValueIndex(pool, cats, inverted, "RVI", VALUE_WEIGHTS.goalieAgePeak);
   return data;
 }
 
@@ -424,6 +440,71 @@ function computeGoalieRotoValues(goalies, cats = LEAGUE_CONFIG.goalieRotoCategor
   assignRoto(pool, paceCats, paceInverted, "RotoVal-Pace", paceWeights);
 }
 
+export const TIER_ORDER = ["S++", "S+", "S", "A", "B", "C", "D", "E", "F"];
+export const TIER_RANK = new Map(TIER_ORDER.map((t, i) => [t, i]));
+// Redraft weights: current production dominates, pace corrects for GP, history is tiebreaker.
+// RVI (F vs D group) outranks ZPX (exact C/L/R/D) so F-vs-D fairness matters most.
+export const TIER_WEIGHTS = { Z: 0.25, GVI: 0.28, AGVI: 0.22, ZPX: 0.1, RVI: 0.15 };
+// Top-fraction cutoffs: S++ <0.005, S+ <0.015, S <0.08, A <0.20, B <0.40, C <0.60, D <0.75, E <0.85, else F.
+const TIER_CUTOFFS = [0.005, 0.015, 0.08, 0.2, 0.4, 0.6, 0.75, 0.85];
+
+function tierField(p, key) {
+  const v = Number(p[key]);
+  // Every z-index has pool mean 0, so a missing term counts as average.
+  return Number.isFinite(v) ? v : 0;
+}
+
+function tierComposite(p) {
+  const z = Number(p.RotoVal);
+  const gvi = Number(p.GVI);
+  if (!Number.isFinite(z) || !Number.isFinite(gvi)) return null;
+  return (
+    TIER_WEIGHTS.Z * z +
+    TIER_WEIGHTS.GVI * gvi +
+    TIER_WEIGHTS.AGVI * tierField(p, "AGVI") +
+    TIER_WEIGHTS.ZPX * tierField(p, "RotoVal-PosExact") +
+    TIER_WEIGHTS.RVI * tierField(p, "RVI")
+  );
+}
+
+function assignTiers(pool) {
+  if (!Array.isArray(pool)) return;
+  const scored = [];
+  for (const p of pool) {
+    const c = tierComposite(p);
+    if (c == null) {
+      p.Tier = "";
+    } else {
+      scored.push([p, c]);
+    }
+  }
+  scored.sort((a, b) => b[1] - a[1]);
+  const n = scored.length;
+  for (let i = 0; i < n; i++) {
+    const topFrac = n === 0 ? 1 : i / n;
+    let tierIdx = TIER_ORDER.length - 1;
+    for (let k = 0; k < TIER_CUTOFFS.length; k++) {
+      if (topFrac < TIER_CUTOFFS[k]) {
+        tierIdx = k;
+        break;
+      }
+    }
+    scored[i][0].Tier = TIER_ORDER[tierIdx];
+  }
+}
+
+function computeTiers(skaters, goalies) {
+  // Forwards and defencemen are tiered in separate pools so D-men compete
+  // against D-men (positional scarcity); goalies keep their own pool.
+  const forwards = Array.isArray(skaters) ? skaters.filter(isForward) : [];
+  const defence = Array.isArray(skaters)
+    ? skaters.filter((p) => !isForward(p))
+    : [];
+  assignTiers(forwards);
+  assignTiers(defence);
+  assignTiers(goalies);
+}
+
 export {
   addPlayerValueFields,
   addGoalerValueFields,
@@ -436,4 +517,6 @@ export {
   computeZScores,
   computeGoalieZScores,
   computeRadarZScores,
+  computeTiers,
+  assignTiers,
 };

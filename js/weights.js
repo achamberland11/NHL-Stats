@@ -13,7 +13,7 @@ export const DEFAULT_WEIGHTS = {
   "SV%": 1,
   GAA: 1,
   SA: 1,
-  Age: 0,
+  Age: 0.5,
 };
 
 const weightsListeners = new Set();

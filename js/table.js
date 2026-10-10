@@ -2,6 +2,7 @@ import { openPlayerCard } from "./playerCard.js";
 import { TEAM_SLUGS } from "./api.js";
 import { FIELD_INFO } from "./fields.js";
 import { LEAGUE_CONFIG } from "./config.js";
+import { TIER_RANK } from "./stats.js";
 
 const RANK_COLS = new Set([
   "rankG",
@@ -55,7 +56,40 @@ const HEADER_LABELS = {
   "RotoVal-PosExact": "ZPX",
   "RotoVal-Pace": "Z82",
   PM82: "+/-82",
+  Tier: "Tier",
 };
+
+const TIER_BADGE_CLASS = {
+  "S++": "tier-splusplus",
+  "S+": "tier-splus",
+  S: "tier-s",
+  A: "tier-a",
+  B: "tier-b",
+  C: "tier-c",
+  D: "tier-d",
+  E: "tier-e",
+  F: "tier-f",
+};
+
+function tierSortVal(v) {
+  if (v == null || v === "") return 99;
+  const r = TIER_RANK.get(v);
+  return r == null ? 99 : r;
+}
+
+// Pin Tier right after identity columns (name/team/position) so it stays prominent.
+function orderColumns(cols) {
+  if (!cols.includes("Tier")) return cols;
+  const rest = cols.filter((c) => c !== "Tier");
+  const anchorCandidates = ["Position", "Team", "Gardiens", "Joueurs"];
+  let anchorIdx = -1;
+  for (const anchor of anchorCandidates) {
+    const i = rest.lastIndexOf(anchor);
+    if (i > anchorIdx) anchorIdx = i;
+  }
+  const insertAt = anchorIdx === -1 ? 0 : anchorIdx + 1;
+  return [...rest.slice(0, insertAt), "Tier", ...rest.slice(insertAt)];
+}
 
 const HIDDEN_COLUMNS_STORAGE_KEY = "nhl_stats_hidden_cols";
 const DEFAULT_HIDDEN_COLUMNS = ["S", "BLK", "HITS", "SA"];
@@ -213,14 +247,16 @@ function applyValueBanding(td, item, col, rankMap, nbr, percentile) {
 
 /// Build table
 function buildTable(data, options = {}) {
-  const sortState = { col: null, asc: true };
+  const sortState = { col: null, asc: true, prevCol: null, prevAsc: true };
   const table = document.createElement("table");
 
   const thead = document.createElement("thead");
   const headerRow = document.createElement("tr");
 
-  const columns = Object.keys(data[0] || {}).filter(
-    (col) => !RANK_COLS.has(col) && !hiddenColumns.has(col),
+  const columns = orderColumns(
+    Object.keys(data[0] || {}).filter(
+      (col) => !RANK_COLS.has(col) && !hiddenColumns.has(col),
+    ),
   );
   const numericMap = {};
 
@@ -251,32 +287,47 @@ function buildTable(data, options = {}) {
 
     th.addEventListener("click", () => {
       const colKey = btn.dataset.col;
+      const isTier = colKey === "Tier";
 
       if (!(colKey in numericMap)) {
-        numericMap[colKey] = columnIsNumeric(data, colKey);
+        numericMap[colKey] = isTier ? false : columnIsNumeric(data, colKey);
       }
-
-      const numeric = numericMap[colKey];
 
       if (sortState.col === colKey) {
         sortState.asc = !sortState.asc;
       } else {
+        // The previous primary sort becomes the secondary (tie-break) sort.
+        sortState.prevCol = sortState.col;
+        sortState.prevAsc = sortState.asc;
         sortState.col = colKey;
-        sortState.asc = RANK_COLS.has(colKey) ? true : numeric ? false : true;
+        // Tier: best (S++) first on first click.
+        sortState.asc = isTier ? true : RANK_COLS.has(colKey) ? true : numericMap[colKey] ? false : true;
       }
 
       data.sort((a, b) => {
         const av = a[colKey];
         const bv = b[colKey];
 
+        if (isTier) {
+          const aBlank = av == null || av === "";
+          const bBlank = bv == null || bv === "";
+          if (aBlank && !bBlank) return 1;
+          if (bBlank && !aBlank) return -1;
+          if (aBlank && bBlank) return 0;
+          const ar = tierSortVal(av);
+          const br = tierSortVal(bv);
+          return sortState.asc ? ar - br : br - ar;
+        }
+
         const aVal = av == null ? "" : av;
         const bVal = bv == null ? "" : bv;
 
+        // Blanks always sort last, regardless of direction.
         if (aVal === "" && bVal !== "") return 1;
         if (bVal === "" && aVal !== "") return -1;
         if (aVal === "" && bVal === "") return 0;
 
-        if (numeric) {
+        if (numericMap[colKey]) {
           return sortState.asc
             ? Number(aVal) - Number(bVal)
             : Number(bVal) - Number(aVal);
@@ -288,15 +339,28 @@ function buildTable(data, options = {}) {
       });
       headerRow
         .querySelectorAll("th")
-        .forEach((th) => th.removeAttribute("data-sorted"));
+        .forEach((th) => {
+          th.removeAttribute("data-sorted");
+          th.removeAttribute("data-sorted-secondary");
+        });
       btn.parentElement.setAttribute(
         "data-sorted",
         sortState.asc ? "asc" : "desc",
       );
+      if (sortState.prevCol != null && sortState.prevCol !== colKey) {
+        const prevBtn = headerRow.querySelector(
+          `button.sort-btn[data-col="${CSS.escape(sortState.prevCol)}"]`,
+        );
+        if (prevBtn) {
+          prevBtn.parentElement.setAttribute(
+            "data-sorted-secondary",
+            sortState.prevAsc ? "asc" : "desc",
+          );
+        }
+      }
       rebuildTbody();
     });
 
-    th.appendChild(btn);
     headerRow.appendChild(th);
   });
   thead.appendChild(headerRow);
@@ -422,7 +486,17 @@ function buildTable(data, options = {}) {
 
       columns.forEach((col) => {
         const td = document.createElement("td");
-        if (col === "Team") {
+        if (col === "Tier") {
+          const v = item[col];
+          if (v != null && v !== "") {
+            const badge = document.createElement("span");
+            badge.className = `tier-badge ${TIER_BADGE_CLASS[v] || ""}`;
+            badge.textContent = v;
+            td.appendChild(badge);
+          } else {
+            td.textContent = "";
+          }
+        } else if (col === "Team") {
           const slug = TEAM_SLUGS[item.Team];
           if (slug) {
             const a = document.createElement("a");

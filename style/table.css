@@ -50,6 +50,16 @@ th {
   cursor: pointer;
 }
 
+/* Sticky table header: sticks below the sticky filter bar.
+   --sticky-offset is set at runtime to the filter bar height. */
+#playersContainer thead th {
+  position: sticky;
+  top: var(--sticky-offset, 0px);
+  z-index: 20;
+  background: rgba(37, 37, 37, 0.85);
+  backdrop-filter: blur(var(--glass-blur-sm));
+}
+
 tbody tr:hover td.value-peak {
   background: var(--color-value-peak-hover);
 }
@@ -93,6 +103,28 @@ body.show-ranks .cell-rank {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+/* Primary sort direction indicator */
+#playersContainer th[data-sorted="asc"] .sort-btn::after {
+  content: " \25B2";
+}
+
+#playersContainer th[data-sorted="desc"] .sort-btn::after {
+  content: " \25BC";
+}
+
+/* Secondary (previous) sort indicator: same arrow, smaller and muted */
+#playersContainer th[data-sorted-secondary="asc"] .sort-btn::after {
+  content: " \25B2";
+  font-size: 0.75em;
+  opacity: 0.45;
+}
+
+#playersContainer th[data-sorted-secondary="desc"] .sort-btn::after {
+  content: " \25BC";
+  font-size: 0.75em;
+  opacity: 0.45;
 }
 
 .cell-name {
@@ -195,4 +227,58 @@ tr.row-removed td {
 
 tr.row-hidden {
   display: none;
+}
+
+.tier-badge {
+  display: inline-block;
+  min-width: 2rem;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.tier-splusplus {
+  color: #ffffff;
+  background: linear-gradient(135deg, #a855f7, #ec4899);
+}
+
+.tier-splus {
+  color: #030303;
+  background: #ffd700;
+}
+
+.tier-s {
+  color: #030303;
+  background: #7ae6ff;
+}
+
+.tier-a {
+  color: #030303;
+  background: #9cff9c;
+}
+
+.tier-b {
+  color: #030303;
+  background: #ffff64;
+}
+
+.tier-c {
+  color: #030303;
+  background: #ffcc99;
+}
+
+.tier-d {
+  color: #030303;
+  background: #ff9c9c;
+}
+
+.tier-e {
+  color: #030303;
+  background: #c39bd3;
+}
+
+.tier-f {
+  color: #f0f0f0;
+  background: #4d4d4d;
 }

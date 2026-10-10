@@ -11,7 +11,7 @@ function isGoalie(data) {
   return data.position === "G";
 }
 
-function buildHeaderSection(data) {
+function buildHeaderSection(data, tier) {
   const header = document.createElement("div");
   header.className = "player-card-header";
 
@@ -36,7 +36,17 @@ function buildHeaderSection(data) {
 
   const nameLine = document.createElement("div");
   nameLine.className = "player-card-bio-name";
-  nameLine.textContent = `${data.firstName.default} ${data.lastName.default}`;
+  const nameText = document.createElement("span");
+  nameText.textContent = `${data.firstName.default} ${data.lastName.default}`;
+  nameLine.appendChild(nameText);
+  if (tier != null && tier !== "") {
+    const badge = document.createElement("span");
+    const slug = String(tier).toLowerCase().replace(/\+/g, "plus");
+    badge.className = `tier-badge tier-${slug}`;
+    badge.textContent = tier;
+    badge.title = FIELD_INFO.Tier || "";
+    nameLine.appendChild(badge);
+  }
 
   const detail = document.createElement("div");
   detail.className = "player-card-bio-detail";
@@ -185,8 +195,8 @@ function buildSeasonsStatsSection(playerID, seasons, seasonData, goalie) {
   const thead = document.createElement("thead");
   const headerRow = document.createElement("tr");
   const headers = goalie
-    ? ["Season", "Team", "GP", "W", "SV%", "GAA", "GVI"]
-    : ["Season", "Team", "GP", "G", "A", "P", "PPP", "+/-", "TOI", "GVI"];
+    ? ["Season", "Team", "GP", "W", "SV%", "GAA", "GVI", "Tier"]
+    : ["Season", "Team", "GP", "G", "A", "P", "PPP", "+/-", "TOI", "GVI", "Tier"];
   headers.forEach((h) => {
     const th = document.createElement("th");
     th.textContent = h;
@@ -213,6 +223,7 @@ function buildSeasonsStatsSection(playerID, seasons, seasonData, goalie) {
         player["SV%"],
         player.GAA,
         player.GVI,
+        player.Tier,
       ];
     } else {
       cells = [
@@ -226,6 +237,7 @@ function buildSeasonsStatsSection(playerID, seasons, seasonData, goalie) {
         player["+/-"],
         player.TOI,
         player.GVI,
+        player.Tier,
       ];
     }
     cells.forEach((c) => {
@@ -591,7 +603,7 @@ export async function populatePlayerCard(card, player, onClose) {
   closeBtn.addEventListener("click", () => onClose());
   card.appendChild(closeBtn);
 
-  card.appendChild(buildHeaderSection(data));
+  card.appendChild(buildHeaderSection(data, player.Tier));
 
   const playerBody = document.createElement("div");
   playerBody.textContent = "";

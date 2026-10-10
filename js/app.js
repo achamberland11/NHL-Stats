@@ -6,6 +6,7 @@ import {
   computeAverageGVI,
   computeRotoValues,
   computeGoalieRotoValues,
+  computeTiers,
   SKATER_RANK_CONFIG,
   GOALIE_RANK_CONFIG,
 } from "./stats.js";
@@ -140,7 +141,7 @@ const WEIGHT_HINTS = {
   "SV%": "Save percentage.",
   GAA: "Goals against average (lower is better).",
   SA: "Shots against (higher is better, counted when the column is displayed).",
-  Age: "Age factor in the value indexes. 0 = off; raise to favor younger players.",
+  Age: "Age factor in GVI/RVI: peaks at prime age (24 skaters, 25 goalies). 0 = off; raise to weight prime age more.",
 };
 
 function buildWeightInput(cat) {
@@ -277,6 +278,25 @@ function buildWeightsPanel() {
     document.body.classList.toggle("show-ranks", ranksToggle.checked);
   });
 
+  // Keep the sticky table header parked below the sticky filter bar,
+  // whose height varies with wrapping. ResizeObserver covers wrap,
+  // zoom, and font-load shifts without a scroll listener.
+  const filtersBar = document.querySelector(".filters-bar");
+  if (filtersBar) {
+    const setStickyOffset = () => {
+      document.documentElement.style.setProperty(
+        "--sticky-offset",
+        `${filtersBar.offsetHeight}px`,
+      );
+    };
+    setStickyOffset();
+    if ("ResizeObserver" in window) {
+      new ResizeObserver(setStickyOffset).observe(filtersBar);
+    } else {
+      window.addEventListener("resize", setStickyOffset);
+    }
+  }
+
   document.getElementById("resetHideBtn").addEventListener("click", () => {
     resetHidden();
     render();
@@ -395,27 +415,43 @@ function buildWeightsPanel() {
     computeGoalieRotoValues(seasonDataGoaler[season], getVisibleGoalieRotoCategories());
   }
 
+  function applyTiersAll() {
+    for (const s of seasons) {
+      computeTiers(seasonDataPlayer[s], seasonDataGoaler[s]);
+    }
+  }
+
   recomputeValueIndexes();
 
   for (const s of seasons) {
     computeRotoValues(seasonDataPlayer[s], getVisibleRotoCategories());
     computeGoalieRotoValues(seasonDataGoaler[s], getVisibleGoalieRotoCategories());
   }
+  applyTiersAll();
 
   allPlayers = seasonDataPlayer[season];
   goalies = seasonDataGoaler[season];
   applyRotoVisibility();
+  applyTiersAll();
   render();
 
   onColumnVisibilityChange(() => {
     recomputeValueIndexes();
-    applyRotoVisibility();
+    for (const s of seasons) {
+      computeRotoValues(seasonDataPlayer[s], getVisibleRotoCategories());
+      computeGoalieRotoValues(seasonDataGoaler[s], getVisibleGoalieRotoCategories());
+    }
+    applyTiersAll();
     render();
   });
 
   onWeightsChange(() => {
     recomputeValueIndexes();
-    applyRotoVisibility();
+    for (const s of seasons) {
+      computeRotoValues(seasonDataPlayer[s], getVisibleRotoCategories());
+      computeGoalieRotoValues(seasonDataGoaler[s], getVisibleGoalieRotoCategories());
+    }
+    applyTiersAll();
     render();
   });
 
@@ -427,6 +463,7 @@ function buildWeightsPanel() {
     allPlayers = seasonDataPlayer[season];
     goalies = seasonDataGoaler[season];
     applyRotoVisibility();
+    applyTiersAll();
 
     clearCompare();
     render();

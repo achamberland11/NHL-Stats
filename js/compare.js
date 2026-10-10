@@ -1,4 +1,4 @@
-import { computeRadarZScores } from "./stats.js";
+import { computeRadarZScores, TIER_RANK } from "./stats.js";
 import { LEAGUE_CONFIG } from "./config.js";
 import { loadPlayerLanding } from "./api.js";
 import { populatePlayerCard } from "./playerCard.js";
@@ -38,12 +38,12 @@ function buildTableSection(players, title, tip = "") {
   const goalie = isGoalieRow(players[0]);
   const rows = goalie
     ? [
-        ["GP"], ["W"], ["SV%"], ["GAA"], ["Age"], ["GVI"], ["AGVI"],
+        ["Tier"], ["GP"], ["W"], ["SV%"], ["GAA"], ["Age"], ["GVI"], ["AGVI"],
         ["Trend"], ["Stab"], ["Z", "RotoVal"], ["Z82", "RotoVal-Pace"],
         ["Rank", "rankGAA"],
       ]
     : [
-        ["GP"], ["G"], ["A"], ["P"], ["PPP"], ["+/-"], ["TOI"], ["Age"],
+        ["Tier"], ["GP"], ["G"], ["A"], ["P"], ["PPP"], ["+/-"], ["TOI"], ["Age"],
         ["GVI"], ["RVI"], ["AGVI"], ["Trend"], ["Stab"],
         ["Z", "RotoVal"], ["ZP", "RotoVal-Pos"],
         ["ZPX", "RotoVal-PosExact"], ["Z82", "RotoVal-Pace"], ["Rank", "rankP"],
@@ -78,9 +78,15 @@ function buildTableSection(players, title, tip = "") {
 
     let bestIdx = null;
     let bestVal = null;
+    const isTierRow = key === "Tier";
     const vals = players.map((p) => {
       const raw = p[key];
-      return raw == null || raw === "" ? null : Number(raw);
+      if (raw == null || raw === "") return null;
+      if (isTierRow) {
+        const r = TIER_RANK.get(raw);
+        return r == null ? null : r;
+      }
+      return Number(raw);
     });
 
     vals.forEach((v, i) => {
@@ -90,7 +96,8 @@ function buildTableSection(players, title, tip = "") {
         bestVal = v;
         return;
       }
-      const lowerBetter = key === "GAA";
+      // Tier ranks ascending (S+ = 0 is best); GAA lower is better; rest higher is better.
+      const lowerBetter = key === "GAA" || isTierRow;
       if (lowerBetter ? v < bestVal : v > bestVal) {
         bestIdx = i;
         bestVal = v;

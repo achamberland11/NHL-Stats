@@ -58,6 +58,9 @@
 .player-card-bio-name {
   font-size: 1.4rem;
   font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
 }
 
 .player-card-bio-team {
